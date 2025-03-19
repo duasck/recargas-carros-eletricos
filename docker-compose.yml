@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  nuvem:
+    build: .
+    container_name: nuvem
+    networks:
+      - rede_recarga
+    ports:
+      - "5000:5000"
+    command: ["python", "/app/nuvem.py"]
+
+  ponto1:
+    build: .
+    container_name: ponto1
+    networks:
+      - rede_recarga
+    command: ["python", "/app/ponto_recarga.py"]
+    environment:
+      - PORT=6001
+
+  ponto2:
+    build: .
+    container_name: ponto2
+    networks:
+      - rede_recarga
+    command: ["python", "/app/ponto_recarga.py"]
+    environment:
+      - PORT=6002
+
+  ponto3:
+    build: .
+    container_name: ponto3
+    networks:
+      - rede_recarga
+    command: ["python", "/app/ponto_recarga.py"]
+    environment:
+      - PORT=6003
+
+  cliente:
+    build: .
+    depends_on:
+      - nuvem
+    networks:
+      - rede_recarga
+    command: ["python", "/app/cliente.py"]
+
+networks:
+  rede_recarga:
+    driver: bridge
