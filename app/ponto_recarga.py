@@ -1,24 +1,34 @@
 import socket
+import logging
 
-# Configuração do Ponto de Recarga
-HOST = "0.0.0.0"   # Aceita conexões da nuvem
-PORT = 6001        # Porta do ponto de recarga (será parametrizada no Docker)
+# Configuração do logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [PONTO DE RECARGA] %(message)s")
+
+HOST = "0.0.0.0"
+PORT = 6001  # Modificável via Docker
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
 s.listen()
 
-print(f"[PONTO DE RECARGA] Servidor rodando na porta {PORT}...")
+logging.info(f"Servidor do Ponto de Recarga rodando na porta {PORT}...")
 
 while True:
     conn, addr = s.accept()
-    print(f"[PONTO DE RECARGA] Conexão recebida de {addr}")
+    logging.info(f"Conexão recebida de {addr}")
 
-    data = conn.recv(1024)
-    if not data:
-        break
+    try:
+        data = conn.recv(1024)
+        if data:
+            mensagem = data.decode()
+            logging.info(f"Mensagem recebida: {mensagem}")
+            resposta = "Recarga iniciada com sucesso!"
+            conn.sendall(resposta.encode())
+            logging.info("Resposta enviada ao cliente.")
 
-    print(f"[PONTO DE RECARGA] Mensagem recebida: {data.decode()}")
-    conn.sendall(b"Recarga iniciada com sucesso!")
+    except Exception as e:
+        logging.error(f"Erro ao processar requisição: {e}")
 
-    conn.close()
+    finally:
+        conn.close()
+        logging.info("Conexão encerrada.")

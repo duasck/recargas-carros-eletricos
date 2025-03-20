@@ -1,11 +1,13 @@
 import socket
 import threading
+import logging
 
-# Configuração do Servidor Central (Nuvem)
-HOST = "0.0.0.0"  # Aceita conexões de qualquer IP
-PORT = 5000       # Porta onde a nuvem escuta conexões dos clientes
+# Configuração do logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s")
 
-# Lista de pontos de recarga disponíveis (serão definidos dinamicamente no Docker)
+HOST = "0.0.0.0"
+PORT = 5000
+
 PONTOS_RECARGA = {
     "P1": ("ponto1", 6001),
     "P2": ("ponto2", 6002),
@@ -13,40 +15,46 @@ PONTOS_RECARGA = {
 }
 
 def handle_client(client_socket, addr):
-    """ Função que processa a requisição do cliente """
-    print(f"[NUVEM] Cliente {addr} conectado.")
+    logging.info(f"Cliente {addr} conectado.")
 
-    while True:
-        data = client_socket.recv(1024)  # Recebe a solicitação do cliente
-        if not data:
-            print(f"[NUVEM] Cliente {addr} desconectou.")
-            break
+    try:
+        while True:
+            data = client_socket.recv(1024)
+            if not data:
+                logging.info(f"Cliente {addr} desconectou.")
+                break
 
-        mensagem = data.decode()
-        print(f"[NUVEM] Mensagem recebida do cliente: {mensagem}")
+            mensagem = data.decode()
+            logging.info(f"Mensagem recebida do cliente: {mensagem}")
 
-        # Simula escolha do melhor ponto de recarga
-        ponto_selecionado = "P1"
-        ip_ponto, porta_ponto = PONTOS_RECARGA[ponto_selecionado]
+            # Simula escolha do melhor ponto de recarga
+            ponto_selecionado = "P1"
+            ip_ponto, porta_ponto = PONTOS_RECARGA[ponto_selecionado]
+            logging.info(f"Encaminhando para o ponto de recarga {ponto_selecionado} ({ip_ponto}:{porta_ponto})")
 
-        # Encaminha a solicitação para o ponto de recarga
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
-            ponto_socket.connect((ip_ponto, porta_ponto))
-            ponto_socket.sendall(mensagem.encode())
-            resposta_ponto = ponto_socket.recv(1024)
+            # Comunicação com o ponto de recarga
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
+                ponto_socket.connect((ip_ponto, porta_ponto))
+                ponto_socket.sendall(mensagem.encode())
+                resposta_ponto = ponto_socket.recv(1024)
 
-        client_socket.sendall(resposta_ponto)  # Envia resposta ao cliente
+            logging.info(f"Resposta do ponto de recarga: {resposta_ponto.decode()}")
+            client_socket.sendall(resposta_ponto)
 
-    client_socket.close()
+    except Exception as e:
+        logging.error(f"Erro ao processar cliente {addr}: {e}")
 
-# Inicia o servidor da nuvem
+    finally:
+        client_socket.close()
+        logging.info(f"Conexão com {addr} encerrada.")
+
+# Inicializa o servidor
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((HOST, PORT))
 server_socket.listen(5)
 
-print(f"[NUVEM] Servidor rodando na porta {PORT}...")
+logging.info(f"Servidor rodando na porta {PORT}...")
 
 while True:
     client_socket, addr = server_socket.accept()
-    client_handler = threading.Thread(target=handle_client, args=(client_socket, addr))
-    client_handler.start()
+    threading.Thread(target=handle_client, args=(client_socket, addr)).start()
