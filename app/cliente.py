@@ -1,5 +1,6 @@
 import socket
 import logging
+import json
 
 # Configuração do logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [CLIENTE] %(message)s")
@@ -7,22 +8,88 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [CLIENTE] %(message)
 HOST = "nuvem"  # Nome do serviço da nuvem no Docker
 PORT = 5000      # Porta da Nuvem
 
-try:
-    logging.info("Iniciando conexão com a Nuvem...")
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((HOST, PORT))
-    logging.info("Conectado à Nuvem.")
+class Cliente:
+    def __init__(self, id_veiculo, bateria, localizacao):
+        self.id_veiculo = id_veiculo
+        self.bateria = bateria
+        self.localizacao = localizacao
+        self.historico = []
 
-    mensagem = "Solicitação de recarga - Veículo ABC123"
-    logging.info(f"Enviando mensagem: {mensagem}")
-    client_socket.sendall(mensagem.encode())
+    def listar_pontos_proximos(self):
+        try:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((HOST, PORT))
+            logging.info("Conectado à Nuvem.")
 
-    resposta = client_socket.recv(1024)
-    logging.info(f"Resposta da Nuvem: {resposta.decode()}")
+            mensagem = {
+                "acao": "listar_pontos",
+                "id_veiculo": self.id_veiculo,
+                "bateria": self.bateria,
+                "localizacao": self.localizacao
+            }
+            client_socket.sendall(json.dumps(mensagem).encode())
 
-except Exception as e:
-    logging.error(f"Erro no cliente: {e}")
+            resposta = client_socket.recv(1024)
+            pontos_proximos = json.loads(resposta.decode())
+            logging.info(f"Pontos de recarga próximos: {pontos_proximos}")
+            return pontos_proximos
 
-finally:
-    client_socket.close()
-    logging.info("Conexão encerrada.")
+        except Exception as e:
+            logging.error(f"Erro no cliente: {e}")
+        finally:
+            client_socket.close()
+            logging.info("Conexão encerrada.")
+
+    def solicitar_reserva(self, id_posto, taxa_pagamento):
+        try:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((HOST, PORT))
+            logging.info("Conectado à Nuvem.")
+
+            mensagem = {
+                "acao": "solicitar_reserva",
+                "id_veiculo": self.id_veiculo,
+                "id_posto": id_posto,
+                "taxa_pagamento": taxa_pagamento
+            }
+            client_socket.sendall(json.dumps(mensagem).encode())
+
+            resposta = client_socket.recv(1024)
+            status_reserva = json.loads(resposta.decode())
+            logging.info(f"Status da reserva: {status_reserva}")
+            return status_reserva
+
+        except Exception as e:
+            logging.error(f"Erro no cliente: {e}")
+        finally:
+            client_socket.close()
+            logging.info("Conexão encerrada.")
+
+    def solicitar_historico(self):
+        try:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((HOST, PORT))
+            logging.info("Conectado à Nuvem.")
+
+            mensagem = {
+                "acao": "solicitar_historico",
+                "id_veiculo": self.id_veiculo
+            }
+            client_socket.sendall(json.dumps(mensagem).encode())
+
+            resposta = client_socket.recv(1024)
+            historico = json.loads(resposta.decode())
+            logging.info(f"Histórico de pagamentos: {historico}")
+            return historico
+
+        except Exception as e:
+            logging.error(f"Erro no cliente: {e}")
+        finally:
+            client_socket.close()
+            logging.info("Conexão encerrada.")
+
+# Exemplo de uso
+cliente = Cliente(id_veiculo="ABC123", bateria=20, localizacao={"lat": -23.5505, "lon": -46.6333})
+pontos_proximos = cliente.listar_pontos_proximos()
+status_reserva = cliente.solicitar_reserva(id_posto="P1", taxa_pagamento=50.0)
+historico = cliente.solicitar_historico()
