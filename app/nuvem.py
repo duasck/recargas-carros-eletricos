@@ -1,6 +1,7 @@
 import socket
 import threading
 import logging
+import json
 
 # Configuração do logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s")
@@ -25,10 +26,13 @@ def handle_client(client_socket, addr):
                 break
 
             mensagem = data.decode()
-            logging.info(f"Mensagem recebida do cliente: {mensagem}")
+            veiculo = json.loads(mensagem)
+            logging.info(f"Mensagem recebida do cliente: {veiculo} do tipo {type(veiculo)}")
 
             # Simula escolha do melhor ponto de recarga
             ponto_selecionado = "P1"
+            #inserir a função para buscar o melhor ponto aqui
+            
             ip_ponto, porta_ponto = PONTOS_RECARGA[ponto_selecionado]
             logging.info(f"Encaminhando para o ponto de recarga {ponto_selecionado} ({ip_ponto}:{porta_ponto})")
 
