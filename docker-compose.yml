@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   nuvem:
     build: .
@@ -6,34 +8,19 @@ services:
       - rede_recarga
     ports:
       - "5000:5000"
+    environment:
+      - NUM_PONTOS=5  # Altere este valor para o número desejado de pontos
     command: ["python", "/app/nuvem.py"]
 
-  ponto1:
+  ponto:
     build: .
-    container_name: ponto1
     networks:
       - rede_recarga
-    command: ["python", "/app/ponto_recarga.py"]
     environment:
-      - PORT=6001
-
-  ponto2:
-    build: .
-    container_name: ponto2
-    networks:
-      - rede_recarga
+      - BASE_PORT=6000
     command: ["python", "/app/ponto_recarga.py"]
-    environment:
-      - PORT=6002
-
-  ponto3:
-    build: .
-    container_name: ponto3
-    networks:
-      - rede_recarga
-    command: ["python", "/app/ponto_recarga.py"]
-    environment:
-      - PORT=6003
+    deploy:
+      replicas: 5  # Deve ser igual a NUM_PONTOS
 
   cliente:
     build: .
@@ -41,7 +28,11 @@ services:
       - nuvem
     networks:
       - rede_recarga
+    environment:
+      - NUM_CLIENTES=3  # Altere este valor para o número desejado de clientes
     command: ["python", "/app/cliente.py"]
+    deploy:
+      replicas: 3  # Deve ser igual a NUM_CLIENTES
 
 networks:
   rede_recarga:
