@@ -1,5 +1,7 @@
 import random
 import os
+import json
+
 
 class Cliente:
     def __init__(self, id, coordenadas):
@@ -13,7 +15,7 @@ class PontoRecarga:
         self.coordenadas = coordenadas
 
 def geraCoordenadas():
-    return (random.uniform(-23.56, -23.54), random.uniform(-46.66, -46.62)
+    return (random.uniform(-23.56, -23.54), random.uniform(-46.66, -46.62))
 
 listaClientes = []
 listaPontos = []
@@ -106,3 +108,4 @@ Opções:
 
 if __name__ == "__main__":
     menu()
+

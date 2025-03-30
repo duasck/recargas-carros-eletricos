@@ -1,38 +1,38 @@
-version: '3.8'
-
 services:
   nuvem:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: nuvem
+    volumes:
+      - .:/app  # Monta o diretório atual no /app do container
     networks:
       - rede_recarga
     ports:
       - "5000:5000"
-    environment:
-      - NUM_PONTOS=5  # Altere este valor para o número desejado de pontos
-    command: ["python", "/app/nuvem.py"]
+    command: ["python", "./nuvem.py"]  # Caminho relativo
 
   ponto:
     build: .
+    volumes:
+      - .:/app
     networks:
       - rede_recarga
-    environment:
-      - BASE_PORT=6000
-    command: ["python", "/app/ponto_recarga.py"]
+    command: ["python", "./ponto_recarga.py"]
     deploy:
-      replicas: 5  # Deve ser igual a NUM_PONTOS
+      replicas: 3
 
   cliente:
     build: .
+    volumes:
+      - .:/app
     depends_on:
       - nuvem
     networks:
       - rede_recarga
-    environment:
-      - NUM_CLIENTES=3  # Altere este valor para o número desejado de clientes
-    command: ["python", "/app/cliente.py"]
+    command: ["python", "./cliente.py"]
     deploy:
-      replicas: 3  # Deve ser igual a NUM_CLIENTES
+      replicas: 2
 
 networks:
   rede_recarga:
