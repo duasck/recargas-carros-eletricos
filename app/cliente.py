@@ -2,6 +2,7 @@ import socket
 import logging
 import json
 import os
+from random_info import listaClientes
 
 # Configuração do logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [CLIENTE] %(message)s")
@@ -96,7 +97,9 @@ class Cliente:
 
 # Exemplo de uso
 
-cliente = Cliente(id_veiculo="ABC123", bateria=20, localizacao={"lat": -23.5505, "lon": -46.6333})
+halfCliente = listaClientes.pop(0)
+  # Pega o primeiro cliente da lista
+cliente = Cliente(id_veiculo=halfCliente.id, bateria=20, localizacao={"lat": halfCliente.coordenadas[0], "lon": halfCliente.coordenadas[1]})
 while True:
     os.system('clear')
     option = input('''Digite uma opção:
