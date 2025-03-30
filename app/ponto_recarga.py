@@ -1,12 +1,13 @@
 import socket
 import logging
 import json
+from random_info import listaPontos
 
 # Configuração do logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [PONTO DE RECARGA] %(message)s")
 
 HOST = "0.0.0.0"
-PORT = 6001  # Modificável via Docker
+PORT = listaPontos.pop(0)  # Modificável via Docker
 
 class PontoRecarga:
     def __init__(self, id_ponto, localizacao):
