@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s"
 HOST = "0.0.0.0"
 PORT = 5000
 
+# configurar para gerar isso automaticamente
 PONTOS_RECARGA = {
     "P1": {"ip": "ponto1", "porta": 6001, "localizacao": {"lat": -23.5505, "lon": -46.6333}, "status": "disponivel"},
     "P2": {"ip": "ponto2", "porta": 6002, "localizacao": {"lat": -23.5615, "lon": -46.6553}, "status": "disponivel"},
