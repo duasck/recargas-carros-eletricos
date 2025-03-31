@@ -44,12 +44,15 @@ def gerar_pontos(n):
     print(f"{n} pontos de recarga gerados com sucesso!")
 
 def salvar_dados():
-    with open('dados_clientes.json', 'w') as f:
-        json.dump([{'id': c.id, 'coordenadas': c.coordenadas} for c in listaClientes], f)
-    
-    with open('dados_pontos.json', 'w') as f:
-        json.dump([{'id': p.id, 'porta': p.porta, 'coordenadas': p.coordenadas} for p in listaPontos], f)
+    try: 
+        with open('dados_clientes.json', 'w') as f:
+            json.dump([{'id': c.id, 'coordenadas': c.coordenadas} for c in listaClientes], f)
 
+        with open('dados_pontos.json', 'w') as f:
+            json.dump([{'id': p.id, 'porta': p.porta, 'coordenadas': p.coordenadas} for p in listaPontos], f)
+    except Exception as e:
+        print(f"Não foi possível salvar os dados: {e}")
+        
 def carregar_dados():
     global listaClientes, listaPontos
     try:
