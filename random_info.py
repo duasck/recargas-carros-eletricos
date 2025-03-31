@@ -46,10 +46,10 @@ def gerar_pontos(n):
 def salvar_dados():
     try: 
         with open('dados_clientes.json', 'w') as f:
-            json.dump([{'id': c.id, 'coordenadas': c.coordenadas} for c in listaClientes], f)
+            json.dump([{'id': cliente.id, 'coordenadas': cliente.coordenadas} for cliente in listaClientes], f)
 
         with open('dados_pontos.json', 'w') as f:
-            json.dump([{'id': p.id, 'porta': p.porta, 'coordenadas': p.coordenadas} for p in listaPontos], f)
+            json.dump([{'id': ponto.id, 'porta': ponto.porta, 'coordenadas': ponto.coordenadas} for ponto in listaPontos], f)
     except Exception as e:
         print(f"Não foi possível salvar os dados: {e}")
         
@@ -58,14 +58,14 @@ def carregar_dados():
     try:
         with open('dados_clientes.json', 'r') as f:
             dados = json.load(f)
-            listaClientes = [Cliente(c['id'], c['coordenadas']) for c in dados]
+            listaClientes = [Cliente(cliente['id'], cliente['coordenadas']) for cliente in dados]
     except FileNotFoundError:
         pass
         
     try:
         with open('dados_pontos.json', 'r') as f:
             dados = json.load(f)
-            listaPontos = [PontoRecarga(p['id'], p['porta'], p['coordenadas']) for p in dados]
+            listaPontos = [PontoRecarga(ponto['id'], ponto['porta'], ponto['coordenadas']) for ponto in dados]
     except FileNotFoundError:
         pass
 
@@ -93,12 +93,12 @@ Opções:
             gerar_pontos(n)
         elif opcao == "3":
             print("\nClientes:")
-            for c in listaClientes[:5]:  # Mostra apenas os 5 primeiros
-                print(f"  {c.id}: {c.coordenadas}")
+            for cliente in listaClientes[:5]:  # Mostra apenas os 5 primeiros
+                print(f"  {cliente.id}: {cliente.coordenadas}")
             
             print("\nPontos de recarga:")
-            for p in listaPontos[:5]:  # Mostra apenas os 5 primeiros
-                print(f"  {p.id}: Porta {p.porta}, Local: {p.coordenadas}")
+            for ponto in listaPontos[:5]:  # Mostra apenas os 5 primeiros
+                print(f"  {ponto.id}: Porta {ponto.porta}, Local: {ponto.coordenadas}")
         elif opcao == "4":
             salvar_dados()
             print("Dados salvos com sucesso!")
