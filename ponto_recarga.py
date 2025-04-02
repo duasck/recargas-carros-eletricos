@@ -14,8 +14,8 @@ HOST = "0.0.0.0"
 BASE_PORT = int(os.getenv('BASE_PORT', 6000))
 
 # Obtém o ID do container a partir do hostname
-container_id = os.getenv('HOSTNAME', 'ponto_1').split('_')[-1]
-PORT = BASE_PORT + int(container_id)
+container_id = os.getenv('HOSTNAME', 'ponto_1').split('_') #pq só ponto1?
+PORT = BASE_PORT + int(container_id[0], 16)
 
 class PontoRecarga:
     def __init__(self, id_ponto, localizacao):
