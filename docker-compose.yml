@@ -20,7 +20,7 @@ services:
       - rede_recarga
     command: ["python", "./ponto_recarga.py"]
     deploy:
-      replicas: 3
+      replicas: 8 
 
   cliente:
     build: .
@@ -32,7 +32,7 @@ services:
       - rede_recarga
     command: ["python", "./cliente.py"]
     deploy:
-      replicas: 2
+      replicas: 3
 
 networks:
   rede_recarga:
