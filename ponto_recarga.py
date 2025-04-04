@@ -2,7 +2,7 @@ import socket
 import logging
 import json
 import os
-from random import uniform, choice
+from random import uniform
 
 # Configuração do logging
 logging.basicConfig(
@@ -10,25 +10,15 @@ logging.basicConfig(
     format="%(asctime)s [%(container_id)s] %(message)s"
 )
 
-def load_points(data_path):
-    with open(data_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return data
-
-#transfere os pontos criados e salvos no json para uma lista
-pontos = load_points('./dados_pontos.json') 
-
-# Obtém o ID do container a partir do hostname
-container_id = os.getenv('HOSTNAME', 'ponto_1') 
-HOST = "0.0.0.0"
-PORT = choice(pontos)["porta"] #isso aqui vai pegar certinho? não vai ter chance de 2 pontos escolherem a mesma porta?
+# Obtém o ID do ponto da variável de ambiente
+PONTO_ID = os.getenv('PONTO_ID', '1')
+PORT = int(os.getenv('PORT', 6000))  # Porta definida pelo compose
 
 class PontoRecarga:
     def __init__(self, id_ponto, localizacao):
-        self.id_ponto = id_ponto
+        self.id_ponto = f"P{PONTO_ID}"  # Usa o ID definido no compose
         self.localizacao = localizacao
         self.status = "disponivel"
-        self.fila = []
         self.veiculo_atual = None
 
     def reservar(self, id_veiculo):
@@ -63,24 +53,25 @@ class PontoRecarga:
 
 # Configuração do ponto de recarga
 ponto = PontoRecarga(
-    id_ponto=f"P{container_id}",
+    id_ponto=PONTO_ID,
     localizacao={
-        # tem que arrumar essa localização dps
-        "lat": -23.5505 + (int(container_id, 16) * 0.01),
-        "lon": -46.6333 + (int(container_id, 16) * 0.01)
+        # Gera localização baseada no ID do ponto para distribuição consistente
+        "lat": -23.5505 + (int(PONTO_ID) * 0.001),
+        "lon": -46.6333 + (int(PONTO_ID) * 0.001)
     }
 )
 
-# Adiciona container_id a todos os logs
+# Configuração do logging
 old_factory = logging.getLogRecordFactory()
 def record_factory(*args, **kwargs):
     record = old_factory(*args, **kwargs)
-    record.container_id = f"PONTO-{container_id}"
+    record.container_id = f"PONTO-{PONTO_ID}"
     return record
 logging.setLogRecordFactory(record_factory)
 
+# Configuração do socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((HOST, PORT))
+s.bind(('0.0.0.0', PORT))
 s.listen()
 
 logging.info(f"Servidor do Ponto de Recarga {ponto.id_ponto} rodando na porta {PORT}...")

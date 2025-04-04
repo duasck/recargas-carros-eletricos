@@ -10,15 +10,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s"
 
 HOST = "0.0.0.0"
 PORT = 5000
-def load_points(data_path):
-    with open(data_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return data
+BASE_PORT = 6000  # Porta base para os pontos de recarga
 
-#transfere os pontos criados e salvos no json para uma lista
-pontos = load_points('./dados_pontos.json')
-
-#isso aqui tá sendo usado??
+# Geração dinâmica dos pontos de recarga
 def gerar_pontos_recarga(num_pontos):
     pontos = {}
     base_lat = -23.5505
@@ -26,18 +20,18 @@ def gerar_pontos_recarga(num_pontos):
     
     for i in range(1, num_pontos + 1):
         pontos[f"P{i}"] = {
-            "ip": f"ponto_{i}",
-            "porta": 6000 + i,
+            "ip": f"ponto_{i}",  # Nome do serviço no Docker
+            "porta": BASE_PORT + i,
             "localizacao": {
-                "lat": base_lat + (i * 0.01),
-                "lon": base_lon + (i * 0.01)
+                "lat": base_lat + (i * 0.001),  # Pequeno incremento
+                "lon": base_lon + (i * 0.001)
             },
             "status": "disponivel"
         }
     return pontos
 
-NUM_PONTOS = int(os.getenv('NUM_PONTOS', 3))
-PONTOS_RECARGA = load_points('./dados_pontos.json')
+NUM_PONTOS = int(os.getenv('NUM_PONTOS', 10))  # Pega do compose ou usa 10 como padrão
+PONTOS_RECARGA = gerar_pontos_recarga(NUM_PONTOS)
 
 def calcular_distancia(local1, local2):
     # Simulação simplificada de cálculo de distância
@@ -68,7 +62,6 @@ def atualizar_status_ponto(id_ponto, status):
         return True
     return False
 
-#onde ocorre a comunicação com o cliente
 def handle_client(client_socket, addr):
     logging.info(f"Cliente {addr} conectado.")
 
@@ -87,29 +80,35 @@ def handle_client(client_socket, addr):
                 client_socket.sendall(json.dumps(pontos_proximos).encode())
 
             elif mensagem["acao"] == "solicitar_reserva":
-                id_ponto = distribuir_clientes(calcular_pontos_proximos(mensagem["localizacao"]))
+                pontos_proximos = calcular_pontos_proximos(mensagem["localizacao"])
+                id_ponto = None
+                
+                # Encontra o primeiro ponto disponível
+                for ponto in pontos_proximos:
+                    if ponto["status"] == "disponivel":
+                        id_ponto = ponto["id_ponto"]
+                        break
+                
                 if id_ponto:
-                    ip_ponto = PONTOS_RECARGA[id_ponto]["ip"]
-                    porta_ponto = PONTOS_RECARGA[id_ponto]["porta"]
-                    
                     try:
+                        # Conecta diretamente ao ponto usando Docker DNS
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
-                            ponto_socket.connect((ip_ponto, porta_ponto))
+                            ponto_socket.connect((f"ponto_{id_ponto[1:]}", PONTOS_RECARGA[id_ponto]["porta"]))
                             ponto_socket.sendall(json.dumps({
                                 "acao": "reservar",
                                 "id_veiculo": mensagem["id_veiculo"]
                             }).encode())
                             resposta_ponto = ponto_socket.recv(1024)
                             
-                        if json.loads(resposta_ponto.decode())["status"] == "reservado":
-                            atualizar_status_ponto(id_ponto, "ocupado")
-                        
-                        client_socket.sendall(resposta_ponto)
+                            if json.loads(resposta_ponto.decode())["status"] == "reservado":
+                                PONTOS_RECARGA[id_ponto]["status"] = "reservado"
+                            
+                            client_socket.sendall(resposta_ponto)
                     except Exception as e:
                         logging.error(f"Erro ao conectar com ponto {id_ponto}: {e}")
                         client_socket.sendall(json.dumps({
                             "status": "erro",
-                            "mensagem": "Falha na conexão com o ponto de recarga"
+                            "mensagem": str(e)
                         }).encode())
                 else:
                     client_socket.sendall(json.dumps({
@@ -118,12 +117,36 @@ def handle_client(client_socket, addr):
                     }).encode())
 
             elif mensagem["acao"] == "liberar_ponto":
-                if atualizar_status_ponto(mensagem["id_ponto"], "disponivel"):
-                    client_socket.sendall(json.dumps({"status": "liberado"}).encode())
+                id_ponto = mensagem["id_ponto"]
+                if id_ponto in PONTOS_RECARGA:
+                    try:
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
+                            ponto_num = id_ponto[1:]  # Remove o 'P' do ID
+                            ponto_socket.connect((f"ponto_{ponto_num}", PONTOS_RECARGA[id_ponto]["porta"]))
+                            ponto_socket.sendall(json.dumps({
+                                "acao": "liberar",
+                                "id_veiculo": mensagem.get("id_veiculo", "")
+                            }).encode())
+                            resposta = ponto_socket.recv(1024)
+                            
+                            if json.loads(resposta.decode())["status"] == "liberado":
+                                PONTOS_RECARGA[id_ponto]["status"] = "disponivel"
+                            
+                            client_socket.sendall(resposta)
+                    except Exception as e:
+                        logging.error(f"Erro ao liberar ponto {id_ponto}: {e}")
+                        client_socket.sendall(json.dumps({
+                            "status": "erro",
+                            "mensagem": str(e)
+                        }).encode())
                 else:
-                    client_socket.sendall(json.dumps({"status": "erro"}).encode())
+                    client_socket.sendall(json.dumps({
+                        "status": "erro",
+                        "mensagem": "Ponto não encontrado"
+                    }).encode())
 
             elif mensagem["acao"] == "solicitar_historico":
+                # Implementação fictícia - pode ser conectada a um banco de dados real
                 historico = [{
                     "data": "2023-10-01",
                     "valor": 50.0,

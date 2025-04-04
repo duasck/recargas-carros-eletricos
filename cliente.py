@@ -12,7 +12,8 @@ logging.basicConfig(
 )
 
 HOST = "nuvem"
-PORT = 5000
+PORT= 5000
+TIMEOUT = 10
 
 class Cliente:
     def __init__(self, id_veiculo, bateria, localizacao):
@@ -22,56 +23,47 @@ class Cliente:
         self.historico = []
         self.ponto_reservado = None
 
-    def listar_pontos_proximos(self):
+    def _enviar_mensagem(self, mensagem):
+        """Método auxiliar para comunicação com a nuvem"""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                client_socket.settimeout(TIMEOUT)
                 client_socket.connect((HOST, PORT))
-                
-                mensagem = {
-                    "acao": "listar_pontos",
-                    "id_veiculo": self.id_veiculo,
-                    "localizacao": self.localizacao
-                }
-                
                 client_socket.sendall(json.dumps(mensagem).encode())
-                resposta = client_socket.recv(1024)
-                pontos_proximos = json.loads(resposta.decode())
                 
-                logging.info(f"Pontos próximos: {pontos_proximos}")
-                return pontos_proximos
-
+                resposta = client_socket.recv(1024)
+                return json.loads(resposta.decode())
+                
+        except socket.timeout:
+            logging.error("Timeout na comunicação com a nuvem")
+            return {"status": "erro", "mensagem": "Timeout"}
         except Exception as e:
-            logging.error(f"Erro ao listar pontos: {e}")
-            return []
+            logging.error(f"Erro na comunicação: {e}")
+            return {"status": "erro", "mensagem": str(e)}
+
+    def listar_pontos_proximos(self):
+        mensagem = {
+            "acao": "listar_pontos",
+            "id_veiculo": self.id_veiculo,
+            "localizacao": self.localizacao
+        }
+        resposta = self._enviar_mensagem(mensagem)
+        logging.info(f"Pontos próximos: {resposta}")
+        return resposta if isinstance(resposta, list) else []
 
     def solicitar_reserva(self):
-        pontos = self.listar_pontos_proximos()
-        if not pontos:
-            return {"status": "nenhum_ponto_disponivel"}
-
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                client_socket.connect((HOST, PORT))
-                
-                mensagem = {
-                    "acao": "solicitar_reserva",
-                    "id_veiculo": self.id_veiculo,
-                    "localizacao": self.localizacao
-                }
-                
-                client_socket.sendall(json.dumps(mensagem).encode())
-                resposta = client_socket.recv(1024)
-                status_reserva = json.loads(resposta.decode())
-                
-                if status_reserva.get("status") == "reservado":
-                    self.ponto_reservado = status_reserva.get("id_ponto")
-                
-                logging.info(f"Reserva: {status_reserva}")
-                return status_reserva
-
-        except Exception as e:
-            logging.error(f"Erro ao solicitar reserva: {e}")
-            return {"status": "erro", "mensagem": str(e)}
+        mensagem = {
+            "acao": "solicitar_reserva",
+            "id_veiculo": self.id_veiculo,
+            "localizacao": self.localizacao
+        }
+        resposta = self._enviar_mensagem(mensagem)
+        
+        if resposta.get("status") == "reservado":
+            self.ponto_reservado = resposta.get("id_ponto")
+        
+        logging.info(f"Reserva: {resposta}")
+        return resposta
 
     def liberar_ponto(self):
         if not self.ponto_reservado:
