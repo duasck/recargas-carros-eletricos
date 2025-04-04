@@ -10,7 +10,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s"
 
 HOST = "0.0.0.0"
 PORT = 5000
+def load_points(data_path):
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return data
 
+#transfere os pontos criados e salvos no json para uma lista
+pontos = load_points('./dados_pontos.json')
+
+#isso aqui tá sendo usado??
 def gerar_pontos_recarga(num_pontos):
     pontos = {}
     base_lat = -23.5505
@@ -29,7 +37,7 @@ def gerar_pontos_recarga(num_pontos):
     return pontos
 
 NUM_PONTOS = int(os.getenv('NUM_PONTOS', 3))
-PONTOS_RECARGA = gerar_pontos_recarga(NUM_PONTOS)
+PONTOS_RECARGA = load_points('./dados_pontos.json')
 
 def calcular_distancia(local1, local2):
     # Simulação simplificada de cálculo de distância
@@ -60,6 +68,7 @@ def atualizar_status_ponto(id_ponto, status):
         return True
     return False
 
+#onde ocorre a comunicação com o cliente
 def handle_client(client_socket, addr):
     logging.info(f"Cliente {addr} conectado.")
 

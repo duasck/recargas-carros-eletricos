@@ -3,7 +3,6 @@ import logging
 import json
 import os
 from random import uniform, choice
-from random_info import listaPontos
 
 # Configuração do logging
 logging.basicConfig(
@@ -11,24 +10,18 @@ logging.basicConfig(
     format="%(asctime)s [%(container_id)s] %(message)s"
 )
 
-
 def load_points(data_path):
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return data
 
-pontos = load_points('./dados_pontos.json')
-
-HOST = "0.0.0.0"
-BASE_PORT = int(os.getenv('BASE_PORT', 6000))
+#transfere os pontos criados e salvos no json para uma lista
+pontos = load_points('./dados_pontos.json') 
 
 # Obtém o ID do container a partir do hostname
-container_id = os.getenv('HOSTNAME', 'ponto_1') #pq só ponto1?
-# PORT = BASE_PORT + int(container_id[0], 16) # tem que pegar o id dos json lá
-
-PORT = choice(pontos)["porta"]
-print(PORT)
-
+container_id = os.getenv('HOSTNAME', 'ponto_1') 
+HOST = "0.0.0.0"
+PORT = choice(pontos)["porta"] #isso aqui vai pegar certinho? não vai ter chance de 2 pontos escolherem a mesma porta?
 
 class PontoRecarga:
     def __init__(self, id_ponto, localizacao):
@@ -72,6 +65,7 @@ class PontoRecarga:
 ponto = PontoRecarga(
     id_ponto=f"P{container_id}",
     localizacao={
+        # tem que arrumar essa localização dps
         "lat": -23.5505 + (int(container_id, 16) * 0.01),
         "lon": -46.6333 + (int(container_id, 16) * 0.01)
     }
