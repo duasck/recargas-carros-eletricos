@@ -3,7 +3,13 @@ import logging
 import json
 import os
 import random
-from random_info import listaClientes
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--modo', type=int, default=0, help='0 - automatico 1 - manuel')
+args = parser.parse_args()
+
+MODO_EXEC = args.modo
 
 # Configuração do logging
 logging.basicConfig(
@@ -126,10 +132,7 @@ def record_factory(*args, **kwargs):
 logging.setLogRecordFactory(record_factory)
 
 # Seleciona um cliente aleatório ou usa um padrão
-try:
-    cliente_info = random.choice(listaClientes)
-except IndexError:
-    cliente_info = type('', (), {'id': f'cliente_{client_id}', 'coordenadas': [random.uniform(-23.56, -23.54), random.uniform(-46.66, -46.62)]})()
+cliente_info = type('', (), {'id': f'cliente_{client_id}', 'coordenadas': [random.uniform(-23.56, -23.54), random.uniform(-46.66, -46.62)]})()
 
 cliente = Cliente(
     id_veiculo=cliente_info.id,
@@ -143,32 +146,63 @@ cliente = Cliente(
 # Simulação de comportamento do cliente
 import time
 
-while True:
-    try:
-        # Lista pontos próximos
-        cliente.listar_pontos_proximos()
-        time.sleep(1)
-        
-        # Tenta fazer uma reserva
-        if random.random() > 0.3:  # 70% de chance de tentar reservar
+def menu():
+    while true:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        opcao = input('''Digite uma ação para o cliente:
+    1 - Solicitar pontos próximos
+    2 - Solicitar reserva
+    3 - Solicitar histórico
+    4 - Liberar ponto
+    5 - Sair\n >>> ''')
+        if opcao == '1':
+            cliente.listar_pontos_proximos()
+        elif opcao == '2':
             cliente.solicitar_reserva()
-            time.sleep(2)
-            
-            # Libera o ponto após um tempo
-            if cliente.ponto_reservado and random.random() > 0.5:
-                time.sleep(3)
-                cliente.liberar_ponto()
-        
-        # Consulta histórico ocasionalmente
-        if random.random() > 0.8:  # 20% de chance
+        elif opcao == '3':
             cliente.solicitar_historico()
-        
-        time.sleep(random.randint(2, 5))
-        
-    except KeyboardInterrupt:
-        if cliente.ponto_reservado:
+        elif opcao == '4':
             cliente.liberar_ponto()
-        break
-    except Exception as e:
-        logging.error(f"Erro no loop principal: {e}")
-        time.sleep(5)
+        elif opcao == '5':
+            break 
+        else:
+            print("de 1 a 5 porra!!!")
+        input('Pressione enter...')
+
+def automatico():
+    while True:
+        try:
+            # Lista pontos próximos
+            cliente.listar_pontos_proximos()
+            time.sleep(1)
+            
+            # Tenta fazer uma reserva
+            if random.random() > 0.3:  # 70% de chance de tentar reservar
+                cliente.solicitar_reserva()
+                time.sleep(2)
+                
+                # Libera o ponto após um tempo
+                if cliente.ponto_reservado and random.random() > 0.5:
+                    time.sleep(3)
+                    cliente.liberar_ponto()
+            
+            # Consulta histórico ocasionalmente
+            if random.random() > 0.8:  # 20% de chance
+                cliente.solicitar_historico()
+            
+            time.sleep(random.randint(2, 5))
+            
+        except KeyboardInterrupt:
+            if cliente.ponto_reservado:
+                cliente.liberar_ponto()
+            break
+        except Exception as e:
+            logging.error(f"Erro no loop principal: {e}")
+            time.sleep(5)
+
+if __name__ == '__main__':
+    if MODO_EXEC == 1:
+        menu()
+    else: # 1 para automatico
+        automatico()
+    

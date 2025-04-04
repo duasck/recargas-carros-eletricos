@@ -1,5 +1,6 @@
 import yaml
 import argparse
+from random_info import gerar_clientes, salvar_dados
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--pontos', type=int, default=10, help='Número de pontos de recarga')
@@ -10,6 +11,9 @@ args = parser.parse_args()
 NUM_PONTOS = args.pontos
 NUM_CLIENTES = args.clientes
 INITIAL_PORT_PONTOS = 6000
+
+gerar_clientes(NUM_CLIENTES)
+salvar_dados()
 
 services = {
     'nuvem': {

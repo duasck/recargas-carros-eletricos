@@ -76,6 +76,7 @@ def handle_client(client_socket, addr):
             logging.info(f"Mensagem recebida do cliente: {mensagem}")
 
             if mensagem["acao"] == "listar_pontos":
+                print("chegou")
                 pontos_proximos = calcular_pontos_proximos(mensagem["localizacao"])
                 client_socket.sendall(json.dumps(pontos_proximos).encode())
 

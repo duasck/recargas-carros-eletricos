@@ -77,6 +77,7 @@ def carregar_dados():
                 listaPontos = [PontoRecarga(ponto['id'], ponto['porta'], ponto['coordenadas'], ponto['status']) for ponto in dados]
     except (FileNotFoundError, json.JSONDecodeError):
         pass  # Ignora erro se o arquivo não existir ou estiver corrompido
+
 def menu():
     carregar_dados()
     while True:
