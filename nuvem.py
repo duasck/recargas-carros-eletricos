@@ -94,7 +94,7 @@ def handle_client(client_socket, addr):
                     try:
                         # Conecta diretamente ao ponto usando Docker DNS
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
-                            ponto_socket.connect((f"ponto_{id_ponto[1:]}", PONTOS_RECARGA[id_ponto]["porta"]))
+                            ponto_socket.connect(("localhost", PONTOS_RECARGA[id_ponto]["porta"]))
                             ponto_socket.sendall(json.dumps({
                                 "acao": "reservar",
                                 "id_veiculo": mensagem["id_veiculo"]

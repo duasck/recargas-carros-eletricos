@@ -10,6 +10,7 @@ logging.basicConfig(
     format="%(asctime)s [%(container_id)s] %(message)s"
 )
 
+HOST = "0.0.0.0"
 # Obtém o ID do ponto da variável de ambiente
 PONTO_ID = os.getenv('PONTO_ID', '1')
 PORT = int(os.getenv('PORT', 6001))  # Porta definida pelo compose ou porta padrão
@@ -71,7 +72,7 @@ logging.setLogRecordFactory(record_factory)
 
 # Configuração do socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('0.0.0.0', PORT))
+s.bind((HOST, PORT))
 s.listen()
 
 logging.info(f"Servidor do Ponto de Recarga {ponto.id_ponto} rodando na porta {PORT}...")

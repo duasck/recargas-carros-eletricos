@@ -17,7 +17,7 @@ logging.basicConfig(
     format="%(asctime)s [CLIENTE-%(client_id)s] %(message)s"
 )
 
-HOST = "0.0.0.0" # não esquecer de trocar isso aqui pra "nuvem"
+HOST = "localhost" # não esquecer de trocar isso aqui pra "nuvem"
 PORT= 5000
 TIMEOUT = 10
 
