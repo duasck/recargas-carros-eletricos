@@ -4,6 +4,7 @@ import json
 import os
 import random
 import argparse
+from config import get_host
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--modo', type=int, default=0, help='0 - automatico 1 - manuel')
@@ -20,6 +21,9 @@ logging.basicConfig(
 HOST = "localhost" # não esquecer de trocar isso aqui pra "nuvem"
 PORT= 5000
 TIMEOUT = 10
+# Detecta se está no Docker (quando HOSTNAME existe) ou não
+HOST_NUVEM = get_host("nuvem")
+PORT_NUVEM = 5000
 
 class Cliente:
     def __init__(self, id_veiculo, bateria, localizacao):
@@ -34,7 +38,7 @@ class Cliente:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                 client_socket.settimeout(TIMEOUT)
-                client_socket.connect((HOST, PORT))
+                client_socket.connect((HOST_NUVEM, PORT_NUVEM))
                 client_socket.sendall(json.dumps(mensagem).encode())
                 
                 resposta = client_socket.recv(1024)

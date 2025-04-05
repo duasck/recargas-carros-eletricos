@@ -4,6 +4,7 @@ import logging
 import json
 import os
 from random import uniform
+from config import get_host
 
 # Configuração do logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s")
@@ -11,6 +12,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s"
 HOST = "0.0.0.0"
 PORT = 5000
 BASE_PORT = 6000  # Porta base para os pontos de recarga
+
+def get_ponto_host(id_ponto):
+    return f"ponto_{id_ponto[1:]}" if os.getenv('DOCKER_ENV') == "true" else "localhost"
 
 # Geração dinâmica dos pontos de recarga
 def gerar_pontos_recarga(num_pontos):
@@ -94,7 +98,9 @@ def handle_client(client_socket, addr):
                     try:
                         # Conecta diretamente ao ponto usando Docker DNS
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
-                            ponto_socket.connect(("localhost", PONTOS_RECARGA[id_ponto]["porta"]))
+                            ponto_host = get_host(f"ponto_{id_ponto[1:]}")
+                            ponto_socket.connect((ponto_host, PONTOS_RECARGA[id_ponto]["porta"]))
+#                            ponto_socket.connect(("localhost", PONTOS_RECARGA[id_ponto]["porta"]))
                             ponto_socket.sendall(json.dumps({
                                 "acao": "reservar",
                                 "id_veiculo": mensagem["id_veiculo"]
@@ -123,7 +129,9 @@ def handle_client(client_socket, addr):
                     try:
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
                             ponto_num = id_ponto[1:]  # Remove o 'P' do ID
-                            ponto_socket.connect((f"ponto_{ponto_num}", PONTOS_RECARGA[id_ponto]["porta"]))
+                            ponto_host = get_host(f"ponto_{id_ponto[1:]}")
+                            ponto_socket.connect((ponto_host, PONTOS_RECARGA[id_ponto]["porta"]))
+                            #ponto_socket.connect(("localhost", PONTOS_RECARGA[id_ponto]["porta"]))
                             ponto_socket.sendall(json.dumps({
                                 "acao": "liberar",
                                 "id_veiculo": mensagem.get("id_veiculo", "")

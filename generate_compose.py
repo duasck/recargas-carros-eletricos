@@ -26,7 +26,11 @@ services = {
         'networks': ['rede_recarga'],
         'ports': ["5000:5000"],
         'command': ["python", "./nuvem.py"],
-        'environment': [f"NUM_PONTOS={NUM_PONTOS}"]
+        'environment': 
+            [
+                "DOCKER_ENV=true",
+                f"NUM_PONTOS={NUM_PONTOS}"
+            ]
     }
 }
 
@@ -41,6 +45,7 @@ for i in range(1, NUM_PONTOS + 1):
         'networks': ['rede_recarga'],
         'command': ["python", "./ponto_recarga.py"],
         'environment': [
+            "DOCKER_ENV=true",
             f"PORT={INITIAL_PORT_PONTOS + i}",
             f"PONTO_ID={i}"
         ]
@@ -58,6 +63,7 @@ for i in range(1, NUM_CLIENTES + 1):
         'networks': ['rede_recarga'],
         'command': ["python", "./cliente.py"],
         'environment': [
+            "DOCKER_ENV=true",
             f"HOSTNAME=cliente_{i}"  # Para identificação no logging
         ]
     }
