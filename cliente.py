@@ -17,7 +17,7 @@ logging.basicConfig(
     format="%(asctime)s [CLIENTE-%(client_id)s] %(message)s"
 )
 
-HOST = "nuvem"
+HOST = "0.0.0.0" # não esquecer de trocar isso aqui pra "nuvem"
 PORT= 5000
 TIMEOUT = 10
 
@@ -147,7 +147,7 @@ cliente = Cliente(
 import time
 
 def menu():
-    while true:
+    while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         opcao = input('''Digite uma ação para o cliente:
     1 - Solicitar pontos próximos
@@ -205,4 +205,3 @@ if __name__ == '__main__':
         menu()
     else: # 1 para automatico
         automatico()
-    

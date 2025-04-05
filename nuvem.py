@@ -30,7 +30,7 @@ def gerar_pontos_recarga(num_pontos):
         }
     return pontos
 
-NUM_PONTOS = int(os.getenv('NUM_PONTOS', 10))  # Pega do compose ou usa 10 como padrão
+NUM_PONTOS = int(os.getenv('NUM_PONTOS', 1))  # Pega do compose ou usa 10 como padrão
 PONTOS_RECARGA = gerar_pontos_recarga(NUM_PONTOS)
 
 def calcular_distancia(local1, local2):

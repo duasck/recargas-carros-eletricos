@@ -12,7 +12,7 @@ logging.basicConfig(
 
 # Obtém o ID do ponto da variável de ambiente
 PONTO_ID = os.getenv('PONTO_ID', '1')
-PORT = int(os.getenv('PORT', 6000))  # Porta definida pelo compose
+PORT = int(os.getenv('PORT', 6001))  # Porta definida pelo compose ou porta padrão
 
 class PontoRecarga:
     def __init__(self, id_ponto, localizacao):
