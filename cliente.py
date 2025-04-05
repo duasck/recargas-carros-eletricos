@@ -81,7 +81,7 @@ class Cliente:
 
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                client_socket.connect((HOST, PORT))
+                client_socket.connect((HOST_NUVEM, PORT_NUVEM))
                 
                 mensagem = {
                     "acao": "liberar_ponto",
@@ -106,7 +106,7 @@ class Cliente:
     def solicitar_historico(self):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                client_socket.connect((HOST, PORT))
+                client_socket.connect((HOST_NUVEM, PORT_NUVEM))
                 
                 mensagem = {
                     "acao": "solicitar_historico",

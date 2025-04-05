@@ -5,7 +5,10 @@ import json
 import os
 from random import uniform
 from config import get_host
-
+"""
+TO-DO:
+    - arrumar o histórico
+"""
 # Configuração do logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s")
 
@@ -80,7 +83,6 @@ def handle_client(client_socket, addr):
             logging.info(f"Mensagem recebida do cliente: {mensagem}")
 
             if mensagem["acao"] == "listar_pontos":
-                print("chegou")
                 pontos_proximos = calcular_pontos_proximos(mensagem["localizacao"])
                 client_socket.sendall(json.dumps(pontos_proximos).encode())
 
