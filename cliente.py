@@ -62,19 +62,38 @@ class Cliente:
         return resposta if isinstance(resposta, list) else []
 
     def solicitar_reserva(self):
+        pontos_proximos = self.listar_pontos_proximos()
+        for i, ponto in enumerate(pontos_proximos):
+            print(f"{i+1}. {ponto['id_ponto']} - Distância: {ponto['distancia']:.4f}")
+        
+        escolha = int(input("Escolha o ponto a reservar (número): ")) - 1
+        ponto_escolhido = pontos_proximos[escolha]
+        print(ponto_escolhido)
         mensagem = {
             "acao": "solicitar_reserva",
+            "ponto_escolhido": ponto_escolhido["id_ponto"],
             "id_veiculo": self.id_veiculo,
             "localizacao": self.localizacao
         }
         resposta = self._enviar_mensagem(mensagem)
-        
+    
         if resposta.get("status") == "reservado":
             self.ponto_reservado = resposta.get("id_ponto")
         
         logging.info(f"Reserva: {resposta}")
         return resposta
-
+    
+    def iniciar_recarga(self):
+        mensagem = {
+            "acao": "iniciar_recarga",
+            "ponto_escolhido": self.ponto_reservado["id_ponto"],
+            "id_veiculo": self.id_veiculo,
+            "localizacao": self.localizacao
+        }
+        resposta = self._enviar_mensagem(mensagem)
+        logging.info(f"Recarga: {resposta}")
+        return resposta
+    
     def liberar_ponto(self):
         if not self.ponto_reservado:
             return {"status": "nenhum_ponto_reservado"}
@@ -140,7 +159,7 @@ cliente_info = type('', (), {'id': f'cliente_{client_id}', 'coordenadas': [rando
 
 cliente = Cliente(
     id_veiculo=cliente_info.id,
-    bateria=random.randint(10, 30),
+    bateria=random.randint(10, 20),
     localizacao={
         "lat": cliente_info.coordenadas[0],
         "lon": cliente_info.coordenadas[1]
@@ -156,21 +175,28 @@ def menu():
         opcao = input('''Digite uma ação para o cliente:
     1 - Solicitar pontos próximos
     2 - Solicitar reserva
-    3 - Solicitar histórico
-    4 - Liberar ponto
-    5 - Sair\n >>> ''')
+    3 - Iniciar recarga
+    4 - Solicitar histórico
+    5 - Liberar ponto
+    6 - Sair\n >>> ''')
         if opcao == '1':
             cliente.listar_pontos_proximos()
         elif opcao == '2':
             cliente.solicitar_reserva()
         elif opcao == '3':
-            cliente.solicitar_historico()
+            cliente.iniciar_recarga()
         elif opcao == '4':
-            cliente.liberar_ponto()
+            cliente.solicitar_historico()
         elif opcao == '5':
+            cliente.liberar_ponto()
+        elif opcao == '6':
             break 
         else:
-            print("de 1 a 5 porra!!!")
+            print("de 1 a 6 porra!!!")
+        if cliente.bateria <= 20:
+            print()
+            print()
+            cliente.listar_pontos_proximos()
         input('Pressione enter...')
 
 def automatico():
@@ -206,6 +232,6 @@ def automatico():
 
 if __name__ == '__main__':
     if MODO_EXEC == 1:
-        menu()
-    else: # 1 para automatico
         automatico()
+    else: # 1 para automatico
+        menu()

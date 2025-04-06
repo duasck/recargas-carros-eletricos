@@ -2,6 +2,7 @@ import socket
 import logging
 import json
 import os
+import time
 from random import uniform
 
 # Configuração do logging
@@ -21,6 +22,8 @@ class PontoRecarga:
         self.localizacao = localizacao
         self.status = "disponivel"
         self.veiculo_atual = None
+        self.nivel_bateria = 20  # Bateria inicial do veículo em kWh
+        self.capacidade_maxima = 100  # Capacidade máxima do veículo
 
     def reservar(self, id_veiculo):
         if self.status == "disponivel":
@@ -29,22 +32,48 @@ class PontoRecarga:
             return {
                 "status": "reservado",
                 "id_ponto": self.id_ponto,
-                "localizacao": self.localizacao
+                "localizacao": self.localizacao,
+                "bateria_atual": self.nivel_bateria
             }
         else:
             return {"status": "indisponivel"}
 
     def iniciar_recarga(self, taxa_recarga):
+        import datetime
+
         if self.status == "reservado" and self.veiculo_atual:
             self.status = "ocupado"
+
+            valor_kwh = float(input("Quantos kWh deseja carregar?\n >>> "))
+            forma_pagamento = input("Forma de pagamento (1 - cartão crédito ou debito\n2 - pix):\n >>> ")
+
+            capacidade_restante = self.capacidade_maxima - self.nivel_bateria
+            recarga_real = min(valor_kwh, capacidade_restante)
+
+            print(f"\n🔌 Iniciando recarga de {recarga_real} kWh...")
+            for i in range(int(recarga_real)):
+                time.sleep(1)  # Simula 1 segundo por kWh
+                self.nivel_bateria += 1
+                print(f"⚡ {i+1} kWh carregados - Bateria: {self.nivel_bateria}/{self.capacidade_maxima} kWh")
+
+            print("✅ Recarga finalizada.")
+
             return {
-                "status": "recarga_iniciada",
+                "status": "recarga_finalizada",
                 "taxa_recarga": taxa_recarga,
-                "id_ponto": self.id_ponto
+                "id_ponto": self.id_ponto,
+                "id_veiculo": self.veiculo_atual,
+                "data": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "forma_pagamento": "cartão" if forma_pagamento == "1" else "pix",
+                "valor": recarga_real,
+                "bateria_final": self.nivel_bateria,
+                "tempo_total": f"{int(recarga_real)} segundos"
             }
         else:
             return {"status": "indisponivel"}
 
+
+        
     def liberar(self):
         if self.status in ["reservado", "ocupado"]:
             self.status = "disponivel"
@@ -98,6 +127,10 @@ while True:
                 conn.sendall(json.dumps(resposta).encode())
                 logging.info(f"Recarga iniciada: {resposta}")
 
+            elif mensagem["acao"] == "status_recarga":
+                status = "finalizada" if not self.recarga_em_andamento else "em andamento"
+                conn.sendall(json.dumps({"status": status}).encode())
+            
             elif mensagem["acao"] == "liberar":
                 resposta = ponto.liberar()
                 conn.sendall(json.dumps(resposta).encode())

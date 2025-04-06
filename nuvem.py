@@ -89,10 +89,10 @@ def handle_client(client_socket, addr):
             elif mensagem["acao"] == "solicitar_reserva":
                 pontos_proximos = calcular_pontos_proximos(mensagem["localizacao"])
                 id_ponto = None
-                
+                print(mensagem["ponto_escolhido"])
                 # Encontra o primeiro ponto disponível
                 for ponto in pontos_proximos:
-                    if ponto["status"] == "disponivel":
+                    if mensagem["ponto_escolhido"] == ponto["id_ponto"] and ponto["status"] == "disponivel":
                         id_ponto = ponto["id_ponto"]
                         break
                 
@@ -110,8 +110,7 @@ def handle_client(client_socket, addr):
                             resposta_ponto = ponto_socket.recv(1024)
                             
                             if json.loads(resposta_ponto.decode())["status"] == "reservado":
-                                PONTOS_RECARGA[id_ponto]["status"] = "reservado"
-                            
+                                PONTOS_RECARGA[id_ponto]["status"] = "reservado"                        
                             client_socket.sendall(resposta_ponto)
                     except Exception as e:
                         logging.error(f"Erro ao conectar com ponto {id_ponto}: {e}")
@@ -123,6 +122,60 @@ def handle_client(client_socket, addr):
                     client_socket.sendall(json.dumps({
                         "status": "indisponivel",
                         "mensagem": "Nenhum ponto disponível"
+                    }).encode())
+
+            elif mensagem["acao"] == "iniciar_recarga":
+                id_ponto = mensagem["id_ponto"]
+                if id_ponto in PONTOS_RECARGA:
+                    try:
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
+                            #ponto_num = id_ponto[1:]  # Remove o 'P' do ID
+                            ponto_host = get_host(f"ponto_{id_ponto[1:]}")
+                            ponto_socket.connect((ponto_host, PONTOS_RECARGA[id_ponto]["porta"]))
+                            #ponto_socket.connect(("localhost", PONTOS_RECARGA[id_ponto]["porta"]))
+                            ponto_socket.sendall(json.dumps({
+                                "acao": "iniciar_recarga",
+                                "id_veiculo": mensagem.get("id_veiculo", "")
+                            }).encode())
+                            resposta = ponto_socket.recv(1024)
+
+                            client_socket.sendall(resposta)
+                            def verificar_status_depois(id_ponto):
+                                time.sleep(10)
+                                try:
+                                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
+                                        ponto_host = get_host(f"ponto_{id_ponto[1:]}")
+                                        ponto_socket.connect((ponto_host, PONTOS_RECARGA[id_ponto]["porta"]))
+                                        ponto_socket.sendall(json.dumps({
+                                            "acao": "status_recarga"
+                                        }).encode())
+                                        resposta_status = ponto_socket.recv(1024)
+                                        status = json.loads(resposta_status.decode())
+
+                                        logging.info(f"Status da recarga no ponto {id_ponto} após 10s: {status}")
+
+                                        if status.get("status") == "finalizada":
+                                            PONTOS_RECARGA[id_ponto]["status"] = "disponivel"
+                                            logging.info(f"Recarga finalizada. Ponto {id_ponto} liberado.")
+                                        else:
+                                            logging.info(f"Recarga ainda em andamento no ponto {id_ponto}.")
+
+                                except Exception as e:
+                                    logging.error(f"Erro ao verificar status da recarga no ponto {id_ponto}: {e}")
+
+                            # Inicia thread de verificação
+                            threading.Thread(target=verificar_status_depois, args=(id_ponto,), daemon=True).start()
+                            
+                    except Exception as e:
+                        logging.error(f"Erro ao iniciar recarga no ponto {id_ponto}: {e}")
+                        client_socket.sendall(json.dumps({
+                            "status": "erro",
+                            "mensagem": str(e)
+                        }).encode())
+                else:
+                    client_socket.sendall(json.dumps({
+                        "status": "erro",
+                        "mensagem": "Ponto não encontrado"
                     }).encode())
 
             elif mensagem["acao"] == "liberar_ponto":
