@@ -1,14 +1,19 @@
-# Usa a imagem oficial do Python
-FROM python:latest
+FROM python:3.9-slim
 
-# Define o diretório de trabalho dentro do contêiner
+# Cria e define o diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos para dentro do contêiner
-COPY app /app
+# Copia todos os arquivos para o container
+COPY . .
 
-# Expõe portas necessárias
-EXPOSE 5000 6001 6002 6003
+# Instala as dependências
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Comando padrão (definido pelo docker-compose)
-CMD ["python", "/app/nuvem.py"]
+# Garante permissões adequadas
+RUN chmod +x /app/*.py
+
+# Define o usuário
+USER 1000
+
+# Variáveis de ambiente
+ENV PYTHONUNBUFFERED=1

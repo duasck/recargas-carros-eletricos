@@ -1,0 +1,252 @@
+networks:
+  rede_recarga:
+    driver: bridge
+services:
+  cliente_1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./cliente.py
+    depends_on:
+    - nuvem
+    environment:
+    - DOCKER_ENV=true
+    - HOSTNAME=cliente_1
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  cliente_2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./cliente.py
+    depends_on:
+    - nuvem
+    environment:
+    - DOCKER_ENV=true
+    - HOSTNAME=cliente_2
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  cliente_3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./cliente.py
+    depends_on:
+    - nuvem
+    environment:
+    - DOCKER_ENV=true
+    - HOSTNAME=cliente_3
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  cliente_4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./cliente.py
+    depends_on:
+    - nuvem
+    environment:
+    - DOCKER_ENV=true
+    - HOSTNAME=cliente_4
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  cliente_5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./cliente.py
+    depends_on:
+    - nuvem
+    environment:
+    - DOCKER_ENV=true
+    - HOSTNAME=cliente_5
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  nuvem:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./nuvem.py
+    container_name: nuvem
+    environment:
+    - DOCKER_ENV=true
+    - NUM_PONTOS=10
+    networks:
+    - rede_recarga
+    ports:
+    - 5000:5000
+    volumes:
+    - .:/app
+  ponto_1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6001
+    - PONTO_ID=1
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_10:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6010
+    - PONTO_ID=10
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6002
+    - PONTO_ID=2
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6003
+    - PONTO_ID=3
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6004
+    - PONTO_ID=4
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6005
+    - PONTO_ID=5
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_6:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6006
+    - PONTO_ID=6
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_7:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6007
+    - PONTO_ID=7
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_8:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6008
+    - PONTO_ID=8
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+  ponto_9:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+    - python
+    - ./ponto_recarga.py
+    environment:
+    - DOCKER_ENV=true
+    - PORT=6009
+    - PONTO_ID=9
+    networks:
+    - rede_recarga
+    volumes:
+    - .:/app
+version: '3.8'
