@@ -2,7 +2,6 @@ import socket
 import logging
 import json
 import os
-from random import uniform
 
 # Configuração do logging
 logging.basicConfig(

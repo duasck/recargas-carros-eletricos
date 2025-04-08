@@ -1,13 +1,11 @@
 import yaml
 import argparse
-from random_info import gerar_clientes, salvar_dados
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--pontos', type=int, default=10, help='Número de pontos de recarga')
 parser.add_argument('--clientes', type=int, default=5, help='Número de clientes')
 args = parser.parse_args()
 
-#python generate_compose.py --pontos 15 --clientes 8
 NUM_PONTOS = args.pontos
 NUM_CLIENTES = args.clientes
 INITIAL_PORT_PONTOS = 6000
@@ -26,15 +24,9 @@ services = {
         'networks': ['rede_recarga'],
         'ports': ["5000:5000"],
         'command': ["python", "./nuvem.py"],
-        'environment': 
-            [
-                "DOCKER_ENV=true",
-                f"NUM_PONTOS={NUM_PONTOS}"
-            ]
     }
 }
 
-# Adiciona pontos de recarga
 for i in range(1, NUM_PONTOS + 1):
     services[f'ponto_{i}'] = {
         'build': {
@@ -51,7 +43,6 @@ for i in range(1, NUM_PONTOS + 1):
         ]
     }
 
-# Adiciona clientes
 for i in range(1, NUM_CLIENTES + 1):
     services[f'cliente_{i}'] = {
         'build': {

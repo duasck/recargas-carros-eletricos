@@ -6,8 +6,9 @@ import random
 import argparse
 from config import get_host
 
+# Configuração do argparse para definir o modo de execução
 parser = argparse.ArgumentParser()
-parser.add_argument('--modo', type=int, default=0, help='0 - automatico 1 - manuel')
+parser.add_argument('--modo', type=int, default=0, help='0 - automatico 1 - manual')
 args = parser.parse_args()
 
 MODO_EXEC = args.modo
@@ -18,10 +19,8 @@ logging.basicConfig(
     format="%(asctime)s [CLIENTE-%(client_id)s] %(message)s"
 )
 
-HOST = "localhost" # não esquecer de trocar isso aqui pra "nuvem"
-PORT= 5000
+# Configurações de conexão
 TIMEOUT = 10
-# Detecta se está no Docker (quando HOSTNAME existe) ou não
 HOST_NUVEM = get_host("nuvem")
 PORT_NUVEM = 5000
 
@@ -170,7 +169,7 @@ def menu():
         elif opcao == '5':
             break 
         else:
-            print("de 1 a 5 porra!!!")
+            print("Escolha uma opção válida (1 a 5)!")
         input('Pressione enter...')
 
 def automatico():
@@ -207,5 +206,5 @@ def automatico():
 if __name__ == '__main__':
     if MODO_EXEC == 1:
         menu()
-    else: # 1 para automatico
+    else:  # 0 para automático
         automatico()
