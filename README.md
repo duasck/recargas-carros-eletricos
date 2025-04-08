@@ -74,5 +74,3 @@ Se desejar rodar o cliente em outra máquina, siga os passos abaixo:
   docker-compose -f docker-compose-generated.yml down
   ```
 - Certifique-se de que os arquivos `dados_clientes.json` e `dados_pontos.json` estão atualizados antes de iniciar o sistema.
-
-
