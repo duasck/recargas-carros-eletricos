@@ -90,9 +90,6 @@ services:
     - python
     - ./nuvem.py
     container_name: nuvem
-    environment:
-    - DOCKER_ENV=true
-    - NUM_PONTOS=10
     networks:
     - rede_recarga
     ports:

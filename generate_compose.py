@@ -1,5 +1,6 @@
 import yaml
 import argparse
+from random_info import gerar_clientes, salvar_dados
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--pontos', type=int, default=10, help='Número de pontos de recarga')
