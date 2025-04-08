@@ -3,12 +3,14 @@ import threading
 import logging
 import json
 import os
-from random import uniform
-from config import get_host
+# from random import uniform  # Não está sendo usado
+from config import get_host  # Está sendo usado para obter o host dos pontos
+
 """
 TO-DO:
     - arrumar o histórico
 """
+
 # Configuração do logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [NUVEM] %(message)s")
 
@@ -37,7 +39,7 @@ def gerar_pontos_recarga(num_pontos):
         }
     return pontos
 
-NUM_PONTOS = int(os.getenv('NUM_PONTOS', 1))  # Pega do compose ou usa 10 como padrão
+NUM_PONTOS = int(os.getenv('NUM_PONTOS', 1))  # Pega do compose ou usa 1 como padrão
 PONTOS_RECARGA = gerar_pontos_recarga(NUM_PONTOS)
 
 def calcular_distancia(local1, local2):
@@ -102,7 +104,6 @@ def handle_client(client_socket, addr):
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
                             ponto_host = get_host(f"ponto_{id_ponto[1:]}")
                             ponto_socket.connect((ponto_host, PONTOS_RECARGA[id_ponto]["porta"]))
-#                            ponto_socket.connect(("localhost", PONTOS_RECARGA[id_ponto]["porta"]))
                             ponto_socket.sendall(json.dumps({
                                 "acao": "reservar",
                                 "id_veiculo": mensagem["id_veiculo"]
@@ -130,10 +131,8 @@ def handle_client(client_socket, addr):
                 if id_ponto in PONTOS_RECARGA:
                     try:
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
-                            ponto_num = id_ponto[1:]  # Remove o 'P' do ID
                             ponto_host = get_host(f"ponto_{id_ponto[1:]}")
                             ponto_socket.connect((ponto_host, PONTOS_RECARGA[id_ponto]["porta"]))
-                            #ponto_socket.connect(("localhost", PONTOS_RECARGA[id_ponto]["porta"]))
                             ponto_socket.sendall(json.dumps({
                                 "acao": "liberar",
                                 "id_veiculo": mensagem.get("id_veiculo", "")
