@@ -1,27 +1,31 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
 import random
 import os
 import json
 
-
+# Classe para representar um cliente
 class Cliente:
     def __init__(self, id, coordenadas):
         self.id = id
         self.coordenadas = coordenadas
 
+# Classe para representar um ponto de recarga
 class PontoRecarga:
     def __init__(self, id, porta, coordenadas, status):
         self.id = id
         self.porta = porta
         self.coordenadas = coordenadas
-        self.status = status 
+        self.status = status
 
+# Função para gerar coordenadas aleatórias
 def geraCoordenadas():
     return (random.uniform(-23.56, -23.54), random.uniform(-46.66, -46.62))
 
+# Listas globais para armazenar clientes e pontos de recarga
 listaClientes = []
 listaPontos = []
 
+# Função para gerar clientes
 def gerar_clientes(n):
     global listaClientes
     listaClientes = []
@@ -33,6 +37,7 @@ def gerar_clientes(n):
         listaClientes.append(cliente)
     print(f"{n} clientes gerados com sucesso!")
 
+# Função para gerar pontos de recarga
 def gerar_pontos(n):
     global listaPontos
     listaPontos = []
@@ -45,10 +50,10 @@ def gerar_pontos(n):
         )
         listaPontos.append(ponto)
     print(f"{n} pontos de recarga gerados com sucesso!")
-    print(listaPontos)
 
+# Função para salvar dados em arquivos JSON
 def salvar_dados():
-    try: 
+    try:
         with open('dados_clientes.json', 'w') as f:
             json.dump([{'id': cliente.id, 'coordenadas': cliente.coordenadas} for cliente in listaClientes], f)
 
@@ -56,10 +61,11 @@ def salvar_dados():
             json.dump([{'id': ponto.id, 'porta': ponto.porta, 'coordenadas': ponto.coordenadas, 'status': ponto.status} for ponto in listaPontos], f)
     except Exception as e:
         print(f"Não foi possível salvar os dados: {e}")
-        
+
+# Função para carregar dados de arquivos JSON
 def carregar_dados():
     global listaClientes, listaPontos
-    
+
     # Verifica e carrega clientes
     try:
         if os.path.getsize('./dados_clientes.json') > 0:  # Verifica se o arquivo não está vazio
@@ -68,7 +74,7 @@ def carregar_dados():
                 listaClientes = [Cliente(cliente['id'], cliente['coordenadas']) for cliente in dados]
     except (FileNotFoundError, json.JSONDecodeError):
         pass  # Ignora erro se o arquivo não existir ou estiver corrompido
-    
+
     # Verifica e carrega pontos de recarga
     try:
         if os.path.getsize('./dados_pontos.json') > 0:  # Verifica se o arquivo não está vazio
@@ -78,6 +84,7 @@ def carregar_dados():
     except (FileNotFoundError, json.JSONDecodeError):
         pass  # Ignora erro se o arquivo não existir ou estiver corrompido
 
+# Menu principal
 def menu():
     carregar_dados()
     while True:
@@ -91,9 +98,9 @@ Opções:
 4 - Salvar dados
 5 - Sair
         """)
-        
+
         opcao = input("Escolha uma opção: ")
-        
+
         if opcao == "1":
             n = int(input("Quantos clientes deseja gerar? "))
             gerar_clientes(n)
@@ -106,7 +113,7 @@ Opções:
             print("\nClientes:")
             for cliente in listaClientes[:5]:  # Mostra apenas os 5 primeiros
                 print(f"  {cliente.id}: {cliente.coordenadas}")
-            
+
             print("\nPontos de recarga:")
             for ponto in listaPontos[:5]:  # Mostra apenas os 5 primeiros
                 print(f"  {ponto.id}: Porta {ponto.porta}, Local: {ponto.coordenadas}, status: {ponto.status}")
@@ -117,9 +124,8 @@ Opções:
             break
         else:
             print("Opção inválida!")
-        
+
         input("\nPressione Enter para continuar...")
 
 if __name__ == "__main__":
     menu()
-
