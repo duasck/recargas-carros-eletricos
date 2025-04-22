@@ -3,6 +3,7 @@ import threading
 import logging
 import json
 import os
+from collections import defaultdict
 # from random import uniform  # Não está sendo usado
 from config import get_host  # Está sendo usado para obter o host dos pontos
 
@@ -35,18 +36,16 @@ def gerar_pontos_recarga(num_pontos):
                 "lat": base_lat + (i * 0.001),  # Pequeno incremento
                 "lon": base_lon + (i * 0.001)
             },
-            "status": "disponivel"
+            "status": "disponivel",
+            "fila": [],  # Lista para armazenar IDs dos veículos na fila
+            "veiculo_atual": None  # Veículo atualmente usando o ponto
         }
     return pontos
 
 NUM_PONTOS = int(os.getenv('NUM_PONTOS', 1))  # Pega do compose ou usa 1 como padrão
 PONTOS_RECARGA = gerar_pontos_recarga(NUM_PONTOS)
 
-def calcular_distancia(local1, local2):
-    # Simulação simplificada de cálculo de distância
-    return ((local1["lat"] - local2["lat"])**2 + (local1["lon"] - local2["lon"])**2)**0.5
-
-def calcular_pontos_proximos(localizacao_cliente):
+def calcular_pontos_proximos_com_fila(localizacao_cliente):
     pontos_proximos = []
     for id_ponto, info in PONTOS_RECARGA.items():
         distancia = calcular_distancia(localizacao_cliente, info["localizacao"])
@@ -54,8 +53,25 @@ def calcular_pontos_proximos(localizacao_cliente):
             "id_ponto": id_ponto,
             "distancia": distancia,
             "status": info["status"],
-            "localizacao": info["localizacao"]
+            "localizacao": info["localizacao"],
+            "tamanho_fila": len(info["fila"]),
+            "pode_entrar_fila": True
         })
+    pontos_proximos.sort(key=lambda x: (x["tamanho_fila"], x["distancia"]))
+    return pontos_proximos[:5]
+
+def calcular_pontos_proximos(localizacao_cliente):
+    # Mantém a função original que só retorna pontos disponíveis
+    pontos_proximos = []
+    for id_ponto, info in PONTOS_RECARGA.items():
+        if info["status"] == "disponivel":  # Filtra apenas pontos disponíveis
+            distancia = calcular_distancia(localizacao_cliente, info["localizacao"])
+            pontos_proximos.append({
+                "id_ponto": id_ponto,
+                "distancia": distancia,
+                "status": info["status"],
+                "localizacao": info["localizacao"]
+            })
     pontos_proximos.sort(key=lambda x: x["distancia"])
     return pontos_proximos[:5]
 
@@ -85,14 +101,20 @@ def handle_client(client_socket, addr):
             logging.info(f"Mensagem recebida do cliente: {mensagem}")
 
             if mensagem["acao"] == "listar_pontos":
+                # Lista apenas pontos disponíveis
                 pontos_proximos = calcular_pontos_proximos(mensagem["localizacao"])
                 client_socket.sendall(json.dumps(pontos_proximos).encode())
 
+            elif mensagem["acao"] == "listar_pontos_com_fila":
+                # Lista todos os pontos próximos, incluindo ocupados com informação da fila
+                pontos_proximos = calcular_pontos_proximos_com_fila(mensagem["localizacao"])
+                client_socket.sendall(json.dumps(pontos_proximos).encode())
+
             elif mensagem["acao"] == "solicitar_reserva":
+                # Mantém o comportamento original - só tenta reservar pontos disponíveis
                 pontos_proximos = calcular_pontos_proximos(mensagem["localizacao"])
                 id_ponto = None
                 
-                # Encontra o primeiro ponto disponível
                 for ponto in pontos_proximos:
                     if ponto["status"] == "disponivel":
                         id_ponto = ponto["id_ponto"]
@@ -100,7 +122,6 @@ def handle_client(client_socket, addr):
                 
                 if id_ponto:
                     try:
-                        # Conecta diretamente ao ponto usando Docker DNS
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ponto_socket:
                             ponto_host = get_host(f"ponto_{id_ponto[1:]}")
                             ponto_socket.connect((ponto_host, PONTOS_RECARGA[id_ponto]["porta"]))
@@ -112,6 +133,7 @@ def handle_client(client_socket, addr):
                             
                             if json.loads(resposta_ponto.decode())["status"] == "reservado":
                                 PONTOS_RECARGA[id_ponto]["status"] = "reservado"
+                                PONTOS_RECARGA[id_ponto]["veiculo_atual"] = mensagem["id_veiculo"]
                             
                             client_socket.sendall(resposta_ponto)
                     except Exception as e:
@@ -124,6 +146,29 @@ def handle_client(client_socket, addr):
                     client_socket.sendall(json.dumps({
                         "status": "indisponivel",
                         "mensagem": "Nenhum ponto disponível"
+                    }).encode())
+
+            elif mensagem["acao"] == "entrar_fila":
+                # Nova ação para entrar na fila de um ponto específico
+                id_ponto = mensagem["id_ponto"]
+                if id_ponto in PONTOS_RECARGA:
+                    if mensagem["id_veiculo"] not in PONTOS_RECARGA[id_ponto]["fila"]:
+                        PONTOS_RECARGA[id_ponto]["fila"].append(mensagem["id_veiculo"])
+                        posicao_fila = len(PONTOS_RECARGA[id_ponto]["fila"])
+                        client_socket.sendall(json.dumps({
+                            "status": "fila",
+                            "mensagem": f"Adicionado à fila do ponto {id_ponto}",
+                            "posicao_fila": posicao_fila
+                        }).encode())
+                    else:
+                        client_socket.sendall(json.dumps({
+                            "status": "erro",
+                            "mensagem": "Veículo já está na fila deste ponto"
+                        }).encode())
+                else:
+                    client_socket.sendall(json.dumps({
+                        "status": "erro",
+                        "mensagem": "Ponto não encontrado"
                     }).encode())
 
             elif mensagem["acao"] == "liberar_ponto":

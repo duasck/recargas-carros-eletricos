@@ -60,6 +60,17 @@ class Cliente:
         logging.info(f"Pontos próximos: {resposta}")
         return resposta if isinstance(resposta, list) else []
 
+    def listar_pontos_com_fila(self):
+        """Lista pontos próximos, incluindo informações sobre filas."""
+        mensagem = {
+            "acao": "listar_pontos_com_fila",
+            "id_veiculo": self.id_veiculo,
+            "localizacao": self.localizacao
+        }
+        resposta = self._enviar_mensagem(mensagem)
+        logging.info(f"Pontos próximos com fila: {resposta}")
+        return resposta if isinstance(resposta, list) else []
+
     def solicitar_reserva(self):
         mensagem = {
             "acao": "solicitar_reserva",
@@ -154,22 +165,25 @@ def menu():
         os.system('cls' if os.name == 'nt' else 'clear')
         opcao = input('''Digite uma ação para o cliente:
     1 - Solicitar pontos próximos
-    2 - Solicitar reserva
-    3 - Solicitar histórico
-    4 - Liberar ponto
-    5 - Sair\n >>> ''')
+    2 - Solicitar pontos próximos com fila
+    3 - Solicitar reserva
+    4 - Solicitar histórico
+    5 - Liberar ponto
+    6 - Sair\n >>> ''')
         if opcao == '1':
             cliente.listar_pontos_proximos()
         elif opcao == '2':
-            cliente.solicitar_reserva()
+            cliente.listar_pontos_com_fila()
         elif opcao == '3':
-            cliente.solicitar_historico()
+            cliente.solicitar_reserva()
         elif opcao == '4':
-            cliente.liberar_ponto()
+            cliente.solicitar_historico()
         elif opcao == '5':
-            break 
+            cliente.liberar_ponto()
+        elif opcao == '6':
+            break
         else:
-            print("Escolha uma opção válida (1 a 5)!")
+            print("Escolha uma opção válida (1 a 6)!")
         input('Pressione enter...')
 
 def automatico():
