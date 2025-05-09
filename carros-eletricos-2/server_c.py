@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify
-from flask import Flask, request, jsonify
 import paho.mqtt.client as mqtt
 import json
 import logging
@@ -49,8 +48,8 @@ def get_charging_points():
 def prepare_reservation():
     data = request.json
     point_id = data.get("point_id")
-    vehicle_id = data.get(" **"vehicle_id"
-    if not pointMARY_id or not vehicle_id:
+    vehicle_id = data.get("vehicle_id")
+    if not point_id or not vehicle_id:
         logger.error("Server C: Missing point_id or vehicle_id in prepare request")
         return jsonify({"status": "ABORT"}, 400)
 
