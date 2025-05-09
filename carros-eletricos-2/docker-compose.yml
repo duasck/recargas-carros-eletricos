@@ -1,0 +1,83 @@
+networks:
+  charging_network:
+    driver: bridge
+services:
+  car_1:
+    build: .
+    command: python car.py vehicle_1 normal
+    depends_on:
+    - server_a
+    networks:
+    - charging_network
+    volumes:
+    - ./:/app
+  car_2:
+    build: .
+    command: python car.py vehicle_2 fast
+    depends_on:
+    - server_a
+    networks:
+    - charging_network
+    volumes:
+    - ./:/app
+  car_3:
+    build: .
+    command: python car.py vehicle_3 normal
+    depends_on:
+    - server_a
+    networks:
+    - charging_network
+    volumes:
+    - ./:/app
+  car_4:
+    build: .
+    command: python car.py vehicle_4 normal
+    depends_on:
+    - server_a
+    networks:
+    - charging_network
+    volumes:
+    - ./:/app
+  car_5:
+    build: .
+    command: python car.py vehicle_5 fast
+    depends_on:
+    - server_a
+    networks:
+    - charging_network
+    volumes:
+    - ./:/app
+  server_a:
+    build: .
+    command: python server_a.py
+    environment:
+    - FLASK_ENV=development
+    networks:
+    - charging_network
+    ports:
+    - 5000:5000
+    volumes:
+    - ./:/app
+  server_b:
+    build: .
+    command: python server_b.py
+    environment:
+    - FLASK_ENV=development
+    networks:
+    - charging_network
+    ports:
+    - 5001:5001
+    volumes:
+    - ./:/app
+  server_c:
+    build: .
+    command: python server_c.py
+    environment:
+    - FLASK_ENV=development
+    networks:
+    - charging_network
+    ports:
+    - 5002:5002
+    volumes:
+    - ./:/app
+version: '3.8'

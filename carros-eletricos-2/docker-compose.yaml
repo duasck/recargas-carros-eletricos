@@ -1,0 +1,57 @@
+version: '3.8'
+services:
+  server_a:
+    build: .
+    command: python server_a.py
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+    networks:
+      - charging_network
+
+  server_b:
+    build: .
+    command: python server_b.py
+    ports:
+      - "5001:5001"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+    networks:
+      - charging_network
+
+  server_c:
+    build: .
+    command: python server_c.py
+    ports:
+      - "5002:5002"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+    networks:
+      - charging_network
+
+  car_1:
+    build: .
+    command: python car_1.py
+    volumes:
+      - .:/app
+    networks:
+      - charging_network
+
+  car_2:
+    build: .
+    command: python car_2.py
+    volumes:
+      - .:/app
+    networks:
+      - charging_network
+
+networks:
+  charging_network:
+    driver: bridge
