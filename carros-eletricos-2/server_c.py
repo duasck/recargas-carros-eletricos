@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify
-from flask import Flask, request, jsonify
 import paho.mqtt.client as mqtt
 import json
 import requests
