@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 # Simulated database for Company A's charging points (Bahia)
 charging_points = [
-    {"id": 1, "location": "Salvador", "available": True},
-    {"id": 2, "location": "Feira de Santana", "available": True}
+    {"id": "BA1", "location": "Salvador", "available": True},
+    {"id": "BA2", "location": "Feira de Santana", "available": True}
 ]
 
 # Graph for route planning

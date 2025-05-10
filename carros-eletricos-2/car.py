@@ -4,15 +4,22 @@ import random
 import time
 import logging
 import sys
-import requests
+import constants 
 
 # MQTT setup
 mqtt_broker = "broker.hivemq.com"
 mqtt_port = 1883
 mqtt_topic = "vehicle/battery"
 
-# Server A endpoint for route planning
-server_a_url = "http://server_a:5000/api/plan_route"
+# Mapeamento de cidades para estados e servidores
+CITY_STATE_MAP = {
+    "Salvador": {"state": "BA", "server": "server_a"},
+    "Feira de Santana": {"state": "BA", "server": "server_a"},
+    "Aracaju": {"state": "SE", "server": "server_b"},
+    "Itabaiana": {"state": "SE", "server": "server_b"},
+    "Maceió": {"state": "AL", "server": "server_c"},
+    "Arapiraca": {"state": "AL", "server": "server_c"}
+}
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -21,26 +28,31 @@ logger = logging.getLogger(__name__)
 def on_connect(client, userdata, flags, rc):
     logger.info(f"Car {userdata['vehicle_id']} connected to MQTT broker with code {rc}")
 
-def request_recharge(vehicle_id):
-    # Fixed route for simplicity (can be randomized)
+def request_recharge(vehicle_id, start_city):
+    # Obtém o servidor baseado na cidade de origem
+    server_info = CITY_STATE_MAP.get(start_city)
+    if not server_info:
+        logger.error(f"Cidade {start_city} não encontrada no mapeamento")
+        return {"error": "Cidade não encontrada"}
+
+    server = server_info["server"]
+    cities = list(CITY_STATE_MAP.keys())
+    end_city = random.choice([city for city in cities if city != start_city])
+    
     payload = {
-        "start": "Salvador",
-        "end": "Maceió",
-        "vehicle_id": vehicle_id
+        "start": start_city,
+        "end": end_city,
+        "vehicle_id": vehicle_id,
+        "state": server_info["state"]
     }
-    # Optional: Randomize route
-    # cities = ["Salvador", "Feira de Santana", "Aracaju", "Itabaiana", "Maceió", "Arapiraca"]
-    # payload = {
-    #     "start": random.choice(cities),
-    #     "end": random.choice(cities),
-    #     "vehicle_id": vehicle_id
-    # }
+
     try:
         logger.info(f"Car {vehicle_id} requesting recharge: {payload}")
-        response = requests.post(server_a_url, json=payload, timeout=5)
-        response_data = response.json()
-        logger.info(f"Car {vehicle_id} recharge response: {response_data}")
-        return response_data
+        # Publica a mensagem no tópico específico do servidor
+        topic = f"recharge/{server}"
+        client.publish(topic, json.dumps(payload))
+        logger.info(f"Car {vehicle_id} recharge request published to {topic}")
+        return payload
     except Exception as e:
         logger.error(f"Car {vehicle_id} failed to request recharge: {e}")
         return {"error": str(e)}
@@ -52,23 +64,29 @@ def simulate_vehicle(vehicle_id, discharge_rate):
     client.loop_start()
 
     battery_level = 100
-    rate_ranges = {"fast": (1.5, 3.0), "normal": (0.5, 2.0), "slow": (0.1, 0.5)}
+    rate_ranges = {"fast": (3.0, 6.0), "normal": (1.0, 4.0), "slow": (0.5, 1.0)}
     min_rate, max_rate = rate_ranges[discharge_rate]
     recharge_requested = False
+    current_city = random.choice(list(CITY_STATE_MAP.keys()))
 
     while True:
         battery_level -= random.uniform(min_rate, max_rate)
         if battery_level < 0:
             battery_level = 100  # Reset for continuous simulation
             recharge_requested = False
+            current_city = random.choice(list(CITY_STATE_MAP.keys()))
 
-        payload = json.dumps({"vehicle_id": vehicle_id, "battery_level": round(battery_level, 2)})
+        payload = json.dumps({
+            "vehicle_id": vehicle_id, 
+            "battery_level": round(battery_level, 2),
+            "current_city": current_city
+        })
         client.publish(mqtt_topic, payload)
-        logger.info(f"Car {vehicle_id} published: Battery {battery_level}%")
+        logger.info(f"Car {vehicle_id} published: Battery {battery_level}% in {current_city}")
 
         # Request recharge if battery <= 20% and not already requested
         if battery_level <= 20 and not recharge_requested:
-            request_recharge(vehicle_id)
+            request_recharge(vehicle_id, current_city)
             recharge_requested = True  # Prevent multiple requests until reset
 
         time.sleep(5)
