@@ -47,6 +47,174 @@ mqtt_port = 1883
 #mqtt_topic = "vehicle/battery"
 mqtt_topic = "vehicle/server_a/battery"
 
+def handle_charging_request(data):
+    vehicle_id = data["vehicle_id"]
+    action = data["action"]
+    
+    if action == "request":
+        logger.info(f"Processing charge request from {vehicle_id}")
+        
+        # Lógica de reserva com fila
+        for point in charging_points:
+            if point["location"] == data["location"]:
+                if point["reserved"] < point["capacity"]:
+                    point["reserved"] += 1
+                    response = {
+                        "status": "READY",
+                        "point_id": point["id"],
+                        "vehicle_id": vehicle_id
+                    }
+                else:
+                    point["queue"].append(vehicle_id)
+                    response = {
+                        "status": "QUEUED",
+                        "position": len(point["queue"]),
+                        "vehicle_id": vehicle_id
+                    }
+                
+                # Envia resposta via MQTT
+                client.publish(
+                    f"charging/{vehicle_id}/response",
+                    json.dumps(response)
+                )
+                break
+    
+    elif action == "done":
+        point_id = data["point_id"]
+        for point in charging_points:
+            if point["id"] == point_id:
+                point["reserved"] = max(0, point["reserved"] - 1)
+                if point["queue"]:
+                    next_vehicle = point["queue"].pop(0)
+                    point["reserved"] += 1
+                    client.publish(
+                        f"charging/{next_vehicle}/response",
+                        json.dumps({
+                            "status": "READY",
+                            "point_id": point_id,
+                            "vehicle_id": next_vehicle
+                        })
+                    )
+                break
+
+def handle_low_battery(vehicle_id, current_city):
+    try:
+        logger.info(f"Server C handling low battery for {vehicle_id} in {current_city}")
+        
+        # 1. Primeiro tenta resolver localmente (Alagoas)
+        local_points = [p for p in charging_points if p["location"] in ["Maceió", "Arapiraca"]]
+        
+        for point in local_points:
+            if point["reserved"] < point["capacity"]:
+                point["reserved"] += 1
+                mqtt_client.publish(
+                    f"charging/{vehicle_id}/response",
+                    json.dumps({
+                        "status": "READY",
+                        "point_id": point["id"],
+                        "city": point["location"],
+                        "server": "c",
+                        "vehicle_id": vehicle_id
+                    })
+                )
+                logger.info(f"Local reservation at {point['id']} for {vehicle_id}")
+                return
+            else:
+                point["queue"].append(vehicle_id)
+                mqtt_client.publish(
+                    f"charging/{vehicle_id}/response",
+                    json.dumps({
+                        "status": "QUEUED",
+                        "point_id": point["id"],
+                        "position": len(point["queue"]),
+                        "city": point["location"],
+                        "server": "c",
+                        "vehicle_id": vehicle_id
+                    })
+                )
+                logger.info(f"Added to queue at {point['id']} (position {len(point['queue'])})")
+                return
+
+        # 2. Se não resolveu localmente, planeja rota
+        end_city = "Salvador"  # Destino padrão alternativo
+        logger.info(f"Planning route from {current_city} to {end_city}")
+        
+        path = nx.shortest_path(G, current_city, end_city, weight="weight")
+        logger.info(f"Calculated route: {path}")
+
+        # 3. Verifica pontos no caminho
+        for city in path[:-1]:  # Exclui o destino final
+            for point in charging_points:
+                if point["location"] == city:
+                    if point["reserved"] < point["capacity"]:
+                        point["reserved"] += 1
+                        mqtt_client.publish(
+                            f"charging/{vehicle_id}/response",
+                            json.dumps({
+                                "status": "READY",
+                                "point_id": point["id"],
+                                "city": city,
+                                "server": "c",
+                                "vehicle_id": vehicle_id,
+                                "route": path  # Envia a rota completa
+                            })
+                        )
+                        logger.info(f"Reserved {point['id']} in {city} for {vehicle_id}")
+                        return
+                    else:
+                        point["queue"].append(vehicle_id)
+                        mqtt_client.publish(
+                            f"charging/{vehicle_id}/response",
+                            json.dumps({
+                                "status": "QUEUED",
+                                "point_id": point["id"],
+                                "position": len(point["queue"]),
+                                "city": city,
+                                "server": "c",
+                                "vehicle_id": vehicle_id,
+                                "route": path
+                            })
+                        )
+                        logger.info(f"Queued at {point['id']} (position {len(point['queue'])})")
+                        return
+
+        # 4. Se não encontrou nenhum ponto
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps({
+                "status": "UNAVAILABLE",
+                "server": "c",
+                "vehicle_id": vehicle_id,
+                "message": "No charging points available along the route"
+            })
+        )
+        logger.warning(f"No available points for {vehicle_id}")
+
+    except nx.NetworkXNoPath:
+        error_msg = f"No path found from {current_city} to {end_city}"
+        logger.error(error_msg)
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps({
+                "status": "NO_ROUTE",
+                "server": "c",
+                "vehicle_id": vehicle_id,
+                "error": error_msg
+            })
+        )
+    except Exception as e:
+        error_msg = f"Server C error: {str(e)}"
+        logger.error(error_msg)
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps({
+                "status": "ERROR",
+                "server": "c",
+                "vehicle_id": vehicle_id,
+                "error": error_msg
+            })
+        )
+
 def on_connect(client, userdata, flags, rc):
     logger.info(f"Server A connected to MQTT broker with code {rc}")
     client.subscribe(mqtt_topic)
@@ -54,14 +222,20 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     try:
         data = json.loads(msg.payload.decode())
-        vehicle_id = data["vehicle_id"]
-        battery_level = data["battery_level"]
-        logger.info(f"Server A received: Vehicle {vehicle_id}, Battery: {battery_level}%")
-        # Automatically trigger route planning for low battery
-        if battery_level < 30:
-            threading.Thread(target=plan_route_for_vehicle, args=(vehicle_id, "Salvador", "Maceió")).start()
+        
+        if msg.topic == f"vehicle/server_a/battery":
+            vehicle_id = data["vehicle_id"]
+            battery_level = data["battery_level"]
+            logger.info(f"Server A received battery update: {vehicle_id}, {battery_level}%")
+            
+            if battery_level < 30:
+                threading.Thread(target=handle_low_battery, args=(vehicle_id, data.get("current_city"))).start()
+        
+        elif msg.topic == "charging/server_a/request":
+            handle_charging_request(data)
+            
     except Exception as e:
-        logger.error(f"Server A error processing MQTT message: {e}")
+        logger.error(f"Error processing MQTT message: {e}")
 
 mqtt_client = mqtt.Client()
 mqtt_client.on_connect = on_connect

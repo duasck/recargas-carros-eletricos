@@ -52,6 +52,7 @@ mqtt_topic = "vehicle/server_c/battery"
 def on_connect(client, userdata, flags, rc):
     logger.info(f"Server C connected to MQTT broker with code {rc}")
     client.subscribe(mqtt_topic)
+    client.subscribe("charging/server_c/request")
 
 def on_message(client, userdata, msg):
     try:
@@ -62,6 +63,110 @@ def on_message(client, userdata, msg):
     except Exception as e:
         logger.error(f"Server C error processing MQTT message: {e}")
 
+def handle_low_battery(vehicle_id, current_city):
+    try:
+        logger.info(f"Server C handling low battery for {vehicle_id}")
+        
+        # Diferente: Prioriza pontos de Alagoas
+        if current_city in ["Maceió", "Arapiraca"]:
+            for point in charging_points:
+                if point["location"] == current_city:
+                    if point["reserved"] < point["capacity"]:
+                        point["reserved"] += 1
+                        response = {
+                            "status": "READY",
+                            "point_id": point["id"],
+                            "server": "c"  # Diferente
+                        }
+                    else:
+                        point["queue"].append(vehicle_id)
+                        response = {
+                            "status": "QUEUED",
+                            "position": len(point["queue"]),
+                            "server": "c"
+                        }
+                    
+                    mqtt_client.publish(
+                        f"charging/{vehicle_id}/response",
+                        json.dumps(response)
+                    )
+                    return
+
+        # Se não encontrou na cidade atual, planeja rota
+        path = nx.shortest_path(G, current_city, "Salvador", weight="weight")  # Diferente: destino padrão
+        
+        # ... (restante similar ao Server A, mas com pontos AL1/AL2)
+
+    except Exception as e:
+        logger.error(f"Server C error: {e}")
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps({
+                "status": "ERROR",
+                "server": "c",
+                "error": str(e)
+            })
+        )
+def handle_charge_request(data):
+    vehicle_id = data['vehicle_id']
+    action = data.get('action')
+    
+    if action == "request":
+        for point in charging_points:
+            if point['reserved'] < point['capacity']:
+                point['reserved'] += 1
+                response = {
+                    'status': 'READY',
+                    'point_id': point['id'],
+                    'vehicle_id': vehicle_id
+                }
+                break
+            else:
+                point['queue'].append(vehicle_id)
+                response = {
+                    'status': 'QUEUED',
+                    'position': len(point['queue']),
+                    'vehicle_id': vehicle_id
+                }
+        
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps(response)
+        )
+        logger.info(f"Sent response to {vehicle_id}: {response}")
+    
+    elif action == "done":
+        for point in charging_points:
+            if point['id'] == data['point_id']:
+                point['reserved'] = max(0, point['reserved'] - 1)
+                if point['queue']:
+                    next_vehicle = point['queue'].pop(0)
+                    point['reserved'] += 1
+                    mqtt_client.publish(
+                        f"charging/{next_vehicle}/response",
+                        json.dumps({
+                            'status': 'READY',
+                            'point_id': point['id'],
+                            'vehicle_id': next_vehicle
+                        })
+                    )
+                break
+
+# Atualize on_message:
+def on_message(client, userdata, msg):
+    try:
+        data = json.loads(msg.payload.decode())
+        
+        if msg.topic == "vehicle/server_c/battery":
+            logger.info(f"Battery update: {data['vehicle_id']} - {data['battery_level']}%")
+            if data['battery_level'] < 20:
+                handle_low_battery(data['vehicle_id'], data.get('current_city'))
+        
+        elif msg.topic == "charging/server_c/request":
+            handle_charge_request(data)
+            
+    except Exception as e:
+        logger.error(f"Error processing message: {e}")
 mqtt_client = mqtt.Client()
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message

@@ -4,18 +4,15 @@ networks:
 services:
   car_1:
     build: .
-    command: python car.py vehicle_1 slow
+    command: python car.py vehicle_1 fast
     depends_on:
     - server_a
-    networks:
-    - charging_network
-    volumes:
-    - ./:/app
-  car_2:
-    build: .
-    command: python car.py vehicle_2 slow
-    depends_on:
-    - server_a
+    - server_b
+    - server_c
+    environment:
+    - VEHICLE_ID=vehicle_1
+    - MQTT_BROKER=broker.hivemq.com
+    - MQTT_PORT=1883
     networks:
     - charging_network
     volumes:
@@ -25,6 +22,9 @@ services:
     command: python server_a.py
     environment:
     - FLASK_ENV=development
+    - MQTT_BROKER=broker.hivemq.com
+    - MQTT_PORT=1883
+    - SERVER_NAME=a
     networks:
     - charging_network
     ports:
@@ -36,6 +36,9 @@ services:
     command: python server_b.py
     environment:
     - FLASK_ENV=development
+    - MQTT_BROKER=broker.hivemq.com
+    - MQTT_PORT=1883
+    - SERVER_NAME=b
     networks:
     - charging_network
     ports:
@@ -47,6 +50,9 @@ services:
     command: python server_c.py
     environment:
     - FLASK_ENV=development
+    - MQTT_BROKER=broker.hivemq.com
+    - MQTT_PORT=1883
+    - SERVER_NAME=c
     networks:
     - charging_network
     ports:
