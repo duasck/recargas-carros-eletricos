@@ -99,10 +99,10 @@ def handle_charging_request(data):
 
 def handle_low_battery(vehicle_id, current_city):
     try:
-        logger.info(f"Server C handling low battery for {vehicle_id} in {current_city}")
+        logger.info(f"Server A handling low battery for {vehicle_id} in {current_city}")
         
-        # 1. Primeiro tenta resolver localmente (Alagoas)
-        local_points = [p for p in charging_points if p["location"] in ["Maceió", "Arapiraca"]]
+        # 1. Primeiro tenta resolver localmente (Bahia)
+        local_points = [p for p in charging_points if p["location"] in ["Salvador", "Feira de Santana"]]
         
         for point in local_points:
             if point["reserved"] < point["capacity"]:
@@ -113,7 +113,7 @@ def handle_low_battery(vehicle_id, current_city):
                         "status": "READY",
                         "point_id": point["id"],
                         "city": point["location"],
-                        "server": "c",
+                        "server": "a",
                         "vehicle_id": vehicle_id
                     })
                 )
@@ -128,22 +128,22 @@ def handle_low_battery(vehicle_id, current_city):
                         "point_id": point["id"],
                         "position": len(point["queue"]),
                         "city": point["location"],
-                        "server": "c",
+                        "server": "a",
                         "vehicle_id": vehicle_id
                     })
                 )
                 logger.info(f"Added to queue at {point['id']} (position {len(point['queue'])})")
                 return
 
-        # 2. Se não resolveu localmente, planeja rota
-        end_city = "Salvador"  # Destino padrão alternativo
+        # 2. Planeja rota para outros pontos
+        end_city = "Maceió"  # Destino alternativo
         logger.info(f"Planning route from {current_city} to {end_city}")
         
         path = nx.shortest_path(G, current_city, end_city, weight="weight")
         logger.info(f"Calculated route: {path}")
 
         # 3. Verifica pontos no caminho
-        for city in path[:-1]:  # Exclui o destino final
+        for city in path[:-1]:
             for point in charging_points:
                 if point["location"] == city:
                     if point["reserved"] < point["capacity"]:
@@ -154,12 +154,11 @@ def handle_low_battery(vehicle_id, current_city):
                                 "status": "READY",
                                 "point_id": point["id"],
                                 "city": city,
-                                "server": "c",
+                                "server": "a",
                                 "vehicle_id": vehicle_id,
-                                "route": path  # Envia a rota completa
+                                "route": path
                             })
                         )
-                        logger.info(f"Reserved {point['id']} in {city} for {vehicle_id}")
                         return
                     else:
                         point["queue"].append(vehicle_id)
@@ -170,12 +169,11 @@ def handle_low_battery(vehicle_id, current_city):
                                 "point_id": point["id"],
                                 "position": len(point["queue"]),
                                 "city": city,
-                                "server": "c",
+                                "server": "a",
                                 "vehicle_id": vehicle_id,
                                 "route": path
                             })
                         )
-                        logger.info(f"Queued at {point['id']} (position {len(point['queue'])})")
                         return
 
         # 4. Se não encontrou nenhum ponto
@@ -183,12 +181,11 @@ def handle_low_battery(vehicle_id, current_city):
             f"charging/{vehicle_id}/response",
             json.dumps({
                 "status": "UNAVAILABLE",
-                "server": "c",
+                "server": "a",
                 "vehicle_id": vehicle_id,
                 "message": "No charging points available along the route"
             })
         )
-        logger.warning(f"No available points for {vehicle_id}")
 
     except nx.NetworkXNoPath:
         error_msg = f"No path found from {current_city} to {end_city}"
@@ -197,19 +194,19 @@ def handle_low_battery(vehicle_id, current_city):
             f"charging/{vehicle_id}/response",
             json.dumps({
                 "status": "NO_ROUTE",
-                "server": "c",
+                "server": "a",
                 "vehicle_id": vehicle_id,
                 "error": error_msg
             })
         )
     except Exception as e:
-        error_msg = f"Server C error: {str(e)}"
+        error_msg = f"Server A error: {str(e)}"
         logger.error(error_msg)
         mqtt_client.publish(
             f"charging/{vehicle_id}/response",
             json.dumps({
                 "status": "ERROR",
-                "server": "c",
+                "server": "a",
                 "vehicle_id": vehicle_id,
                 "error": error_msg
             })

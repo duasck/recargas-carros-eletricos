@@ -266,41 +266,40 @@ def charging_status():
 
 
 def plan_route_for_vehicle(vehicle_id, start, end):
-    logger.info(f"Server A: Planning route for vehicle {vehicle_id} from {start} to {end}")
+    logger.info(f"Server C: Planning route for vehicle {vehicle_id} from {start} to {end}")
     try:
         path = nx.shortest_path(G, start, end, weight="weight")
-        logger.info(f"Server A: Shortest path: {path}")
+        logger.info(f"Server C: Shortest path: {path}")
         
         servers = {
-            "company_b": "http://server_b:5001",
-            "company_c": "http://server_c:5002"
+            "company_a": "http://server_a:5000",
+            "company_b": "http://server_b:5001"
         }
         reservations = []
         all_prepared = True
         
-        # Phase 1: Prepare
+        # Phase 1: Prepare - prioriza pontos de Alagoas
         for i in range(len(path) - 1):
             current_city = path[i]
             reserved = False
             
-            # Try Company A (local) first
+            # Try Company C (local) first
             for point in charging_points:
                 if point["location"] == current_city:
                     if point["reserved"] < point["capacity"]:
                         point["reserved"] += 1
                         reservations.append({
-                            "company": "company_a",
+                            "company": "company_c",
                             "point_id": point["id"],
                             "city": current_city,
                             "url": None
                         })
                         reserved = True
-                        logger.info(f"Server A: Prepared local reservation for {current_city}, point {point['id']}")
+                        logger.info(f"Server C: Prepared local reservation for {current_city}, point {point['id']}")
                         break
                     else:
-                        # Try to queue
                         prepare_response = requests.post(
-                            "http://server_a:5000/api/prepare",
+                            "http://server_c:5002/api/prepare",
                             json={"point_id": point["id"], "vehicle_id": vehicle_id},
                             timeout=2
                         )
@@ -308,14 +307,13 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             result = prepare_response.json()
                             if result["status"] == "QUEUED":
                                 reservations.append({
-                                    "company": "company_a",
+                                    "company": "company_c",
                                     "point_id": point["id"],
                                     "city": current_city,
                                     "url": None,
                                     "position": result["position"]
                                 })
                                 reserved = True
-                                logger.info(f"Server A: Added to queue for {current_city}, point {point['id']}")
                                 break
             
             # Try other companies if needed
@@ -356,25 +354,23 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             if reserved:
                                 break
                     except Exception as e:
-                        logger.error(f"Server A: Error contacting {company}: {e}")
+                        logger.error(f"Server C: Error contacting {company}: {e}")
                         all_prepared = False
             
             if not reserved:
-                logger.error(f"Server A: No available points for {current_city}")
+                logger.error(f"Server C: No available points for {current_city}")
                 all_prepared = False
                 break
         
-        # If any failed, abort all
         if not all_prepared:
-            logger.info(f"Server A: Aborting all reservations for vehicle {vehicle_id}")
             for r in reservations:
-                if r["company"] == "company_a":
+                if r["company"] == "company_c":
                     for point in charging_points:
                         if point["id"] == r["point_id"]:
-                            if "position" in r:  # Was in queue
-                                if r["vehicle_id"] in point["queue"]:
-                                    point["queue"].remove(r["vehicle_id"])
-                            else:  # Was reserved
+                            if "position" in r:
+                                if vehicle_id in point["queue"]:
+                                    point["queue"].remove(vehicle_id)
+                            else:
                                 point["reserved"] = max(0, point["reserved"] - 1)
                 elif r["url"]:
                     try:
@@ -384,14 +380,14 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             timeout=2
                         )
                     except Exception as e:
-                        logger.error(f"Server A: Error aborting reservation: {e}")
+                        logger.error(f"Server C: Error aborting reservation: {e}")
             
             return {"error": "Could not reserve all required points"}
 
         # Phase 2: Commit
         for r in reservations:
-            if r["company"] == "company_a":
-                logger.info(f"Server A: Committed local reservation for {r['city']}, point {r['point_id']}")
+            if r["company"] == "company_c":
+                logger.info(f"Server C: Committed local reservation for {r['city']}, point {r['point_id']}")
             elif r["url"]:
                 try:
                     requests.post(
@@ -400,7 +396,7 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                         timeout=2
                     )
                 except Exception as e:
-                    logger.error(f"Server A: Error committing reservation: {e}")
+                    logger.error(f"Server C: Error committing reservation: {e}")
         
         return {
             "path": path,
@@ -413,7 +409,7 @@ def plan_route_for_vehicle(vehicle_id, start, end):
         }
         
     except Exception as e:
-        logger.error(f"Server A: Route planning error: {e}")
+        logger.error(f"Server C: Route planning error: {e}")
         return {"error": str(e)}
     
 @app.route('/api/plan_route', methods=['POST'])

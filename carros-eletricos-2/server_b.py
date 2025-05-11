@@ -113,14 +113,42 @@ def handle_charge_request(data):
 
 def handle_low_battery(vehicle_id, current_city):
     try:
-        logger.info(f"Server B planning route for {vehicle_id} from {current_city}")
-        end_city = "Maceió"  # Destino padrão diferente se necessário
+        logger.info(f"Server B handling low battery for {vehicle_id} in {current_city}")
         
-        # Diferente: Prioriza pontos de Sergipe
-        path = nx.shortest_path(G, current_city, end_city, weight="weight")
+        # 1. Prioriza pontos de Sergipe
+        local_points = [p for p in charging_points if p["location"] in ["Aracaju", "Itabaiana"]]
         
-        for city in path[:-1]:  # Exclui o destino final
-            # Diferente: Verifica apenas pontos de Sergipe (SE1, SE2)
+        for point in local_points:
+            if point["reserved"] < point["capacity"]:
+                point["reserved"] += 1
+                response = {
+                    "status": "READY",
+                    "point_id": point["id"],
+                    "city": point["location"],
+                    "server": "b"
+                }
+                break
+            else:
+                point["queue"].append(vehicle_id)
+                response = {
+                    "status": "QUEUED",
+                    "position": len(point["queue"]),
+                    "city": point["location"],
+                    "server": "b"
+                }
+                break
+        
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps(response)
+        )
+        logger.info(f"Server B sent response to {vehicle_id}: {response}")
+        return
+
+        # 2. Se não resolveu localmente, planeja rota
+        path = nx.shortest_path(G, current_city, "Maceió", weight="weight")
+        
+        for city in path[:-1]:
             for point in charging_points:
                 if point["location"] == city:
                     if point["reserved"] < point["capacity"]:
@@ -129,7 +157,8 @@ def handle_low_battery(vehicle_id, current_city):
                             "status": "READY",
                             "point_id": point["id"],
                             "city": city,
-                            "server": "b"  # Diferente: Identifica o servidor
+                            "server": "b",
+                            "route": path
                         }
                         break
                     else:
@@ -138,7 +167,8 @@ def handle_low_battery(vehicle_id, current_city):
                             "status": "QUEUED",
                             "position": len(point["queue"]),
                             "city": city,
-                            "server": "b"
+                            "server": "b",
+                            "route": path
                         }
                         break
             
@@ -146,15 +176,30 @@ def handle_low_battery(vehicle_id, current_city):
                 f"charging/{vehicle_id}/response",
                 json.dumps(response)
             )
+            return
 
+    except nx.NetworkXNoPath:
+        error_msg = f"No path found from {current_city} to Maceió"
+        logger.error(error_msg)
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps({
+                "status": "NO_ROUTE",
+                "server": "b",
+                "vehicle_id": vehicle_id,
+                "error": error_msg
+            })
+        )
     except Exception as e:
-        logger.error(f"Server B route error: {e}")
+        error_msg = f"Server B error: {str(e)}"
+        logger.error(error_msg)
         mqtt_client.publish(
             f"charging/{vehicle_id}/response",
             json.dumps({
                 "status": "ERROR",
-                "error": str(e),
-                "server": "b"
+                "server": "b",
+                "vehicle_id": vehicle_id,
+                "error": error_msg
             })
         )
 

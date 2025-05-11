@@ -25,9 +25,9 @@ CITY_STATE_MAP = {
 }
 # Taxas de descarga (min, max) por tipo
 RATE_RANGES = {
-    "fast": (3.0, 6.0),   # Descarga rápida
-    "normal": (1.0, 4.0), # Descarga normal
-    "slow": (0.5, 1.0)    # Descarga lenta
+    "fast": (3.0, 6.0),   
+    "normal": (1.0, 4.0), 
+    "slow": (0.5, 1.0)    
 }
 
 # Logging setup
@@ -73,49 +73,6 @@ def request_recharge(client, vehicle_id, current_city):
     client.publish(topic, json.dumps(payload))
     logger.info(f"Vehicle {vehicle_id} sent recharge request to {topic}")
 
-
-"""
-def request_recharge(vehicle_id, start_city):
-    server_info = CITY_STATE_MAP.get(start_city)
-    if not server_info:
-        return {"error": "Cidade não encontrada"}
-
-    server = server_info["server"]
-    url = f"http://{server}:{constants.PORT_BASE + ['a','b','c'].index(server[-1])}"
-    
-    try:
-        # 1. Verifica pontos disponíveis
-        points_response = requests.get(f"{url}/api/charging_points")
-        points = points_response.json().get(f"company_{server[-1]}", [])
-        
-        # 2. Tenta reservar em cada ponto (ordem de preferência)
-        for point in points:
-            prepare_response = requests.post(
-                f"{url}/api/prepare",
-                json={"point_id": point["id"], "vehicle_id": vehicle_id},
-                timeout=2
-            )
-            
-            if prepare_response.status_code == 200:
-                result = prepare_response.json()
-                if result["status"] == "READY":
-                    return {
-                        "status": "RESERVED",
-                        "point_id": point["id"],
-                        "position": 0
-                    }
-                elif result["status"] == "QUEUED":
-                    return {
-                        "status": "IN_QUEUE",
-                        "point_id": point["id"],
-                        "position": result["position"],
-                        "estimated_time": result["estimated_time"]
-                    }
-        
-        return {"error": "No available charging points"}
-    except Exception as e:
-        return {"error": str(e)}
-"""
 def simulate_vehicle(vehicle_id, discharge_rate):
     userdata = {
         "vehicle_id": vehicle_id,
