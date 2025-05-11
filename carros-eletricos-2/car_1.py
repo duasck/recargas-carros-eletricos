@@ -3,7 +3,6 @@ import json
 import random
 import time
 import logging
-import requests
 
 # MQTT setup
 mqtt_broker = "broker.hivemq.com"

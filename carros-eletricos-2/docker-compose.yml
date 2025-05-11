@@ -4,25 +4,7 @@ networks:
 services:
   car_1:
     build: .
-    command: python car.py vehicle_1 fast
-    depends_on:
-    - server_a
-    networks:
-    - charging_network
-    volumes:
-    - ./:/app
-  car_2:
-    build: .
-    command: python car.py vehicle_2 normal
-    depends_on:
-    - server_a
-    networks:
-    - charging_network
-    volumes:
-    - ./:/app
-  car_3:
-    build: .
-    command: python car.py vehicle_3 fast
+    command: python car.py vehicle_1 slow
     depends_on:
     - server_a
     networks:

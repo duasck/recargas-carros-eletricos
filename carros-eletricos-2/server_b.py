@@ -32,7 +32,8 @@ G.add_edges_from([
 # MQTT setup
 mqtt_broker = "broker.hivemq.com"
 mqtt_port = 1883
-mqtt_topic = "vehicle/battery"
+#mqtt_topic = "vehicle/battery"
+mqtt_topic = "vehicle/server_b/battery"
 
 def on_connect(client, userdata, flags, rc):
     logger.info(f"Server B connected to MQTT broker with code {rc}")
