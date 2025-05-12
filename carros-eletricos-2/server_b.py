@@ -8,7 +8,7 @@ import networkx as nx
 app = Flask(__name__)
 
 # Configuração de logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Pontos de carga da empresa B (Sergipe)

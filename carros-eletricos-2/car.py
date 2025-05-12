@@ -23,6 +23,7 @@ CITY_STATE_MAP = {
     "Maceió": {"state": "AL", "server": "server_c"},
     "Arapiraca": {"state": "AL", "server": "server_c"}
 }
+
 # Taxas de descarga (min, max) por tipo
 RATE_RANGES = {
     "fast": (3.0, 6.0),   
@@ -31,7 +32,7 @@ RATE_RANGES = {
 }
 
 # Logging setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def get_server_topic(server_name):
@@ -71,18 +72,28 @@ def request_recharge(client, vehicle_id, current_city):
     
     topic = TOPICO_RESERVA.format(server=server_info['server'])
     client.publish(topic, json.dumps(payload))
-    logger.info(f"Vehicle {vehicle_id} sent recharge request to {topic}")
+    logger.info(f"{vehicle_id} sent recharge request to {topic}")
 
 def simulate_vehicle(vehicle_id, discharge_rate):
+
+    current_city = random.choice(list(CITY_STATE_MAP.keys()))
+    end_city = random.choice(list(CITY_STATE_MAP.keys()))
+
+    while end_city == current_city:
+        end_city = random.choice(list(CITY_STATE_MAP.keys()))
+
     userdata = {
         "vehicle_id": vehicle_id,
         "battery_level": 30,
-        "current_city": random.choice(list(CITY_STATE_MAP.keys())),
+        "current_city": current_city,
         "recharge_status": None,
         "discharge_rate": discharge_rate,
-        "logger": logging.getLogger(f"Vehicle_{vehicle_id}")
+        "logger": logging.getLogger(f"{vehicle_id}"),
+        "end_city": end_city 
     }
     
+    logger.info(f"{vehicle_id} - Starting: {userdata['current_city']} Ending: {userdata['end_city']}")
+
     client = mqtt.Client(userdata=userdata)
     client.on_connect = on_connect
     client.on_message = on_message
@@ -98,12 +109,14 @@ def simulate_vehicle(vehicle_id, discharge_rate):
 
             # 2. Publica estado da bateria
             server_topic = TOPICO_BATERIA.format(server=CITY_STATE_MAP[userdata['current_city']]['server'])
+            """
             client.publish(server_topic, json.dumps({
                 "vehicle_id": vehicle_id,
                 "battery_level": round(userdata['battery_level'], 2),
                 "current_city": userdata['current_city']
             }))
-            logger.info(f"Vehicle {vehicle_id} battery: {userdata['battery_level']:.2f}%")
+            """
+            logger.info(f"{vehicle_id} battery: {userdata['battery_level']:.2f}%")
 
             # 3. Lógica de recarga
             if userdata['battery_level'] <= 20 and not userdata['recharge_status']:
@@ -112,7 +125,7 @@ def simulate_vehicle(vehicle_id, discharge_rate):
             # 4. Se está na fila
             elif userdata['recharge_status'] and userdata['recharge_status'].get('status') == 'QUEUED':
                 userdata['battery_level'] -= 0.2  # Descarga mínima enquanto espera
-                logger.info(f"Vehicle {vehicle_id} in queue (position {userdata['recharge_status'].get('position')})")
+                logger.info(f"{vehicle_id} in queue (position {userdata['recharge_status'].get('position')})")
             
             # 5. Se está carregando
             elif userdata['recharge_status'] and userdata['recharge_status'].get('status') == 'READY':
@@ -125,11 +138,14 @@ def simulate_vehicle(vehicle_id, discharge_rate):
                         "point_id": userdata['recharge_status']['point_id'],
                         "action": "done"
                     }
+
                     topic = TOPICO_RESERVA.format(server=CITY_STATE_MAP[userdata['current_city']]['server'])
+
                     client.publish(topic, json.dumps(payload))
                     userdata['recharge_status'] = None
+                    # conferir
                     userdata['current_city'] = random.choice(list(CITY_STATE_MAP.keys()))
-                    logger.info(f"Vehicle {vehicle_id} finished charging, moving to {userdata['current_city']}")
+                    logger.info(f"{vehicle_id} finished charging, moving to {userdata['current_city']}")
 
             time.sleep(5)
 
@@ -151,6 +167,6 @@ if __name__ == "__main__":
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    logger = logging.getLogger(f"Vehicle_{vehicle_id}")
+    logger = logging.getLogger(f"{vehicle_id}")
     
     simulate_vehicle(vehicle_id, discharge_rate)

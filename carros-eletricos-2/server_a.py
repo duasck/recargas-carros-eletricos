@@ -9,7 +9,7 @@ import threading
 app = Flask(__name__)
 
 # Logging setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Simulated database for Company A's charging points (Bahia)
@@ -97,7 +97,7 @@ def handle_charging_request(data):
                     )
                 break
 
-def handle_low_battery(vehicle_id, current_city):
+def handle_low_battery(vehicle_id, current_city, end_city):
     try:
         logger.info(f"Server A handling low battery for {vehicle_id} in {current_city}")
         
@@ -136,7 +136,6 @@ def handle_low_battery(vehicle_id, current_city):
                 return
 
         # 2. Planeja rota para outros pontos
-        end_city = "Maceió"  # Destino alternativo
         logger.info(f"Planning route from {current_city} to {end_city}")
         
         path = nx.shortest_path(G, current_city, end_city, weight="weight")
@@ -226,7 +225,7 @@ def on_message(client, userdata, msg):
             logger.info(f"Server A received battery update: {vehicle_id}, {battery_level}%")
             
             if battery_level < 30:
-                threading.Thread(target=handle_low_battery, args=(vehicle_id, data.get("current_city"))).start()
+                threading.Thread(target=handle_low_battery, args=(vehicle_id, data.get("current_city"), data.get("end_city"))).start()
         
         elif msg.topic == "charging/server_a/request":
             handle_charging_request(data)

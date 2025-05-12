@@ -9,7 +9,7 @@ import threading
 app = Flask(__name__)
 
 # Logging setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Simulated database for Company C's charging points (Alagoas)
