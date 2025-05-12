@@ -7,3 +7,22 @@ SERVIDOR_C = PORT_BASE + 2
 TOPICO_BATERIA = "vehicle/{server}/battery"
 TOPICO_RESERVA = "charging/{server}/request"
 TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
+
+# Configurações de tempo
+RESERVATION_TIMEOUT = 300  # 5 minutos em segundos
+
+# Servidores disponíveis
+SERVERS = {
+    "company_a": {
+        "url": f"http://server_a:{SERVIDOR_A}",
+        "cities": ["Salvador", "Feira de Santana"]
+    },
+    "company_b": {
+        "url": f"http://server_b:{SERVIDOR_B}",
+        "cities": ["Aracaju", "Itabaiana"]
+    },
+    "company_c": {
+        "url": f"http://server_c:{SERVIDOR_C}",
+        "cities": ["Maceió", "Arapiraca"]
+    }
+}

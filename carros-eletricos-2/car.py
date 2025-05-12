@@ -84,7 +84,7 @@ def simulate_vehicle(vehicle_id, discharge_rate):
 
     userdata = {
         "vehicle_id": vehicle_id,
-        "battery_level": 30,
+        "battery_level": 40,
         "current_city": current_city,
         "recharge_status": None,
         "discharge_rate": discharge_rate,
@@ -109,13 +109,13 @@ def simulate_vehicle(vehicle_id, discharge_rate):
 
             # 2. Publica estado da bateria
             server_topic = TOPICO_BATERIA.format(server=CITY_STATE_MAP[userdata['current_city']]['server'])
-            """
-            client.publish(server_topic, json.dumps({
-                "vehicle_id": vehicle_id,
-                "battery_level": round(userdata['battery_level'], 2),
-                "current_city": userdata['current_city']
-            }))
-            """
+            if userdata['battery_level'] <= 30:
+                client.publish(server_topic, json.dumps({
+                    "vehicle_id": vehicle_id,
+                    "battery_level": round(userdata['battery_level'], 2),
+                    "current_city": userdata['current_city']
+                }))
+            
             logger.info(f"{vehicle_id} battery: {userdata['battery_level']:.2f}%")
 
             # 3. Lógica de recarga
