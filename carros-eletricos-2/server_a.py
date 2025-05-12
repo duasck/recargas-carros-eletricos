@@ -44,7 +44,6 @@ G.add_edges_from([
 # MQTT setup
 mqtt_broker = "broker.hivemq.com"
 mqtt_port = 1883
-#mqtt_topic = "vehicle/battery"
 mqtt_topic = "vehicle/server_a/battery"
 
 def handle_charging_request(data):
@@ -65,7 +64,8 @@ def handle_charging_request(data):
                         "vehicle_id": vehicle_id
                     }
                 else:
-                    point["queue"].append(vehicle_id)
+                    if vehicle_id not in point["queue"]:
+                        point["queue"].append(vehicle_id)
                     response = {
                         "status": "QUEUED",
                         "position": len(point["queue"]),
@@ -120,7 +120,8 @@ def handle_low_battery(vehicle_id, current_city, end_city):
                 logger.info(f"Local reservation at {point['id']} for {vehicle_id}")
                 return
             else:
-                point["queue"].append(vehicle_id)
+                if vehicle_id not in point["queue"]:
+                    point["queue"].append(vehicle_id)
                 mqtt_client.publish(
                     f"charging/{vehicle_id}/response",
                     json.dumps({
@@ -160,7 +161,8 @@ def handle_low_battery(vehicle_id, current_city, end_city):
                         )
                         return
                     else:
-                        point["queue"].append(vehicle_id)
+                        if vehicle_id not in point["queue"]:
+                            point["queue"].append(vehicle_id)
                         mqtt_client.publish(
                             f"charging/{vehicle_id}/response",
                             json.dumps({
@@ -264,7 +266,8 @@ def prepare_reservation():
             else:
                 # Adiciona na fila
                 position = len(point["queue"]) + 1
-                point["queue"].append(vehicle_id)
+                if vehicle_id not in point["queue"]:
+                    point["queue"].append(vehicle_id)
                 return jsonify({
                     "status": "QUEUED",
                     "position": position,

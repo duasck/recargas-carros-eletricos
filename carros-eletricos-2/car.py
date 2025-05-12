@@ -75,7 +75,6 @@ def request_recharge(client, vehicle_id, current_city):
     logger.info(f"{vehicle_id} sent recharge request to {topic}")
 
 def simulate_vehicle(vehicle_id, discharge_rate):
-
     current_city = random.choice(list(CITY_STATE_MAP.keys()))
     end_city = random.choice(list(CITY_STATE_MAP.keys()))
 
@@ -89,7 +88,8 @@ def simulate_vehicle(vehicle_id, discharge_rate):
         "recharge_status": None,
         "discharge_rate": discharge_rate,
         "logger": logging.getLogger(f"{vehicle_id}"),
-        "end_city": end_city 
+        "end_city": end_city,
+        "has_requested_recharge": False  # Adicione esta flag
     }
     
     logger.info(f"{vehicle_id} - Starting: {userdata['current_city']} Ending: {userdata['end_city']}")
@@ -113,14 +113,18 @@ def simulate_vehicle(vehicle_id, discharge_rate):
                 client.publish(server_topic, json.dumps({
                     "vehicle_id": vehicle_id,
                     "battery_level": round(userdata['battery_level'], 2),
-                    "current_city": userdata['current_city']
+                    "current_city": userdata['current_city'],
+                    "end_city": userdata['end_city']  # Adicione esta linha
                 }))
             
             logger.info(f"{vehicle_id} battery: {userdata['battery_level']:.2f}%")
 
             # 3. Lógica de recarga
-            if userdata['battery_level'] <= 20 and not userdata['recharge_status']:
+            if (userdata['battery_level'] <= 20 and 
+                not userdata['recharge_status'] and 
+                not userdata['has_requested_recharge']):  # Modifique esta condição
                 request_recharge(client, vehicle_id, userdata['current_city'])
+                userdata['has_requested_recharge'] = True  # Marque que já fez a solicitação
             
             # 4. Se está na fila
             elif userdata['recharge_status'] and userdata['recharge_status'].get('status') == 'QUEUED':
@@ -143,7 +147,7 @@ def simulate_vehicle(vehicle_id, discharge_rate):
 
                     client.publish(topic, json.dumps(payload))
                     userdata['recharge_status'] = None
-                    # conferir
+                    userdata['has_requested_recharge'] = False  # Reset a flag quando termina de carregar
                     userdata['current_city'] = random.choice(list(CITY_STATE_MAP.keys()))
                     logger.info(f"{vehicle_id} finished charging, moving to {userdata['current_city']}")
 
