@@ -85,7 +85,7 @@ def simulate_vehicle(vehicle_id, discharge_rate):
     
     userdata = {
         "vehicle_id": vehicle_id,
-        "battery_level": 40,
+        "battery_level": 30,
         "current_city": current_city,
         "recharge_status": None,
         "discharge_rate": discharge_rate,

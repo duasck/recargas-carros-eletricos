@@ -5,6 +5,7 @@ import requests
 import networkx as nx
 import logging
 import threading
+import constants
 
 # Adicionar lock global
 charging_points_lock = threading.Lock()
@@ -20,7 +21,6 @@ charging_points = [
     {
         "id": "AL1", 
         "location": "Maceió", 
-        "available": True,
         "capacity": 2,
         "reserved": 0,
         "queue": []
@@ -28,7 +28,6 @@ charging_points = [
     {
         "id": "AL2", 
         "location": "Arapiraca", 
-        "available": True,
         "capacity": 2,
         "reserved": 0,
         "queue": []
@@ -37,49 +36,43 @@ charging_points = [
 
 # Graph for route planning
 G = nx.Graph()
-G.add_nodes_from(["Salvador", "Feira de Santana", "Aracaju", "Itabaiana", "Maceió", "Arapiraca"])
+G.add_nodes_from([
+    "Salvador", "Feira de Santana", "Aracaju", "Itabaiana", 
+    "Maceió", "Arapiraca", "Recife", "Caruaru", 
+    "João Pessoa", "Campina Grande"
+])
 G.add_edges_from([
     ("Salvador", "Feira de Santana", {"weight": 100}),
     ("Feira de Santana", "Aracaju", {"weight": 300}),
     ("Aracaju", "Itabaiana", {"weight": 50}),
     ("Itabaiana", "Maceió", {"weight": 200}),
-    ("Maceió", "Arapiraca", {"weight": 80})
+    ("Maceió", "Arapiraca", {"weight": 80}),
+    ("Maceió", "Recife", {"weight": 250}),
+    ("Recife", "Caruaru", {"weight": 120}),
+    ("Recife", "João Pessoa", {"weight": 110}),
+    ("João Pessoa", "Campina Grande", {"weight": 130})
 ])
 
 # MQTT setup
 mqtt_broker = "broker.hivemq.com"
 mqtt_port = 1883
-#mqtt_topic = "vehicle/battery"
-mqtt_topic = "vehicle/server_c/battery"
+mqtt_topic = constants.TOPICO_BATERIA.format(server="server_c")
 
-def on_connect(client, userdata, flags, rc):
-    logger.info(f"Server C connected to MQTT broker with code {rc}")
-    client.subscribe(mqtt_topic)
-    client.subscribe("charging/server_c/request")
-
-def on_message(client, userdata, msg):
-    try:
-        data = json.loads(msg.payload.decode())
-        vehicle_id = data["vehicle_id"]
-        battery_level = data["battery_level"]
-        logger.info(f"Server C received: Vehicle {vehicle_id}, Battery: {battery_level}%")
-    except Exception as e:
-        logger.error(f"Server C error processing MQTT message: {e}")
-
-def handle_low_battery(vehicle_id, current_city):
-    try:
-        logger.info(f"Server C handling low battery for {vehicle_id}")
-        
-        # Diferente: Prioriza pontos de Alagoas
-        if current_city in ["Maceió", "Arapiraca"]:
+def handle_charging_request(data):
+    vehicle_id = data["vehicle_id"]
+    action = data["action"]
+    
+    with charging_points_lock:
+        if action == "request":
+            logger.info(f"Processing charge request from {vehicle_id}")
             for point in charging_points:
-                if point["location"] == current_city:
+                if point["location"] == data["location"]:
                     if point["reserved"] < point["capacity"]:
                         point["reserved"] += 1
                         response = {
                             "status": "READY",
                             "point_id": point["id"],
-                            "server": "c"  # Diferente
+                            "vehicle_id": vehicle_id
                         }
                     else:
                         if vehicle_id not in point["queue"]:
@@ -87,91 +80,177 @@ def handle_low_battery(vehicle_id, current_city):
                         response = {
                             "status": "QUEUED",
                             "position": len(point["queue"]),
-                            "server": "c"
+                            "vehicle_id": vehicle_id
                         }
-                    
                     mqtt_client.publish(
-                        f"charging/{vehicle_id}/response",
-                        json.dumps(response)
+                        constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
+                        json.dumps(response),
+                        qos=constants.MQTT_QOS
                     )
-                    return
+                    logger.info(f"Queue status for {point['id']} ({point['location']}): {point['queue']}")
+                    break
+        elif action == "done":
+            point_id = data["point_id"]
+            for point in charging_points:
+                if point["id"] == point_id:
+                    point["reserved"] = max(0, point["reserved"] - 1)
+                    if point["queue"]:
+                        next_vehicle = point["queue"].pop(0)
+                        point["reserved"] += 1
+                        mqtt_client.publish(
+                            constants.TOPICO_RESPOSTA.format(vehicle_id=next_vehicle),
+                            json.dumps({
+                                "status": "READY",
+                                "point_id": point_id,
+                                "vehicle_id": next_vehicle
+                            }),
+                            qos=constants.MQTT_QOS
+                        )
+                    logger.info(f"Queue status for {point['id']} ({point['location']}): {point['queue']}")
+                    break
 
-        # Se não encontrou na cidade atual, planeja rota
-        path = nx.shortest_path(G, current_city, "Salvador", weight="weight")  # Diferente: destino padrão
+def handle_low_battery(vehicle_id, current_city, end_city):
+    try:
+        logger.info(f"Server C handling low battery for {vehicle_id} in {current_city}")
         
-        # ... (restante similar ao Server A, mas com pontos AL1/AL2)
+        local_points = [p for p in charging_points if p["location"] in ["Maceió", "Arapiraca"]]
+        
+        for point in local_points:
+            if point["reserved"] < point["capacity"]:
+                point["reserved"] += 1
+                mqtt_client.publish(
+                    constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
+                    json.dumps({
+                        "status": "READY",
+                        "point_id": point["id"],
+                        "city": point["location"],
+                        "server": "c",
+                        "vehicle_id": vehicle_id
+                    }),
+                    qos=constants.MQTT_QOS
+                )
+                logger.info(f"Local reservation at {point['id']} for {vehicle_id}")
+                return
+            else:
+                if vehicle_id not in point["queue"]:
+                    point["queue"].append(vehicle_id)
+                mqtt_client.publish(
+                    constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
+                    json.dumps({
+                        "status": "QUEUED",
+                        "point_id": point["id"],
+                        "position": len(point["queue"]),
+                        "city": point["location"],
+                        "server": "c",
+                        "vehicle_id": vehicle_id
+                    }),
+                    qos=constants.MQTT_QOS
+                )
+                logger.info(f"Added to queue at {point['id']} (position {len(point['queue'])})")
+                return
 
-    except Exception as e:
-        logger.error(f"Server C error: {e}")
+        logger.info(f"Planning route from {current_city} to {end_city}")
+        
+        path = nx.shortest_path(G, current_city, end_city, weight="weight")
+        logger.info(f"Calculated route: {path}")
+
+        for city in path[:-1]:
+            for point in charging_points:
+                if point["location"] == city:
+                    if point["reserved"] < point["capacity"]:
+                        point["reserved"] += 1
+                        mqtt_client.publish(
+                            constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
+                            json.dumps({
+                                "status": "READY",
+                                "point_id": point["id"],
+                                "city": city,
+                                "server": "c",
+                                "vehicle_id": vehicle_id,
+                                "route": path
+                            }),
+                            qos=constants.MQTT_QOS
+                        )
+                        return
+                    else:
+                        if vehicle_id not in point["queue"]:
+                            point["queue"].append(vehicle_id)
+                        mqtt_client.publish(
+                            constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
+                            json.dumps({
+                                "status": "QUEUED",
+                                "point_id": point["id"],
+                                "position": len(point["queue"]),
+                                "city": city,
+                                "server": "c",
+                                "vehicle_id": vehicle_id,
+                                "route": path
+                            }),
+                            qos=constants.MQTT_QOS
+                        )
+                        return
+
         mqtt_client.publish(
-            f"charging/{vehicle_id}/response",
+            constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
+            json.dumps({
+                "status": "UNAVAILABLE",
+                "server": "c",
+                "vehicle_id": vehicle_id,
+                "message": "No charging points available along the route"
+            }),
+            qos=constants.MQTT_QOS
+        )
+
+    except nx.NetworkXNoPath:
+        error_msg = f"No path found from {current_city} to {end_city}"
+        logger.error(error_msg)
+        mqtt_client.publish(
+            constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
+            json.dumps({
+                "status": "NO_ROUTE",
+                "server": "c",
+                "vehicle_id": vehicle_id,
+                "error": error_msg
+            }),
+            qos=constants.MQTT_QOS
+        )
+    except Exception as e:
+        error_msg = f"Server C error: {str(e)}"
+        logger.error(error_msg)
+        mqtt_client.publish(
+            constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
             json.dumps({
                 "status": "ERROR",
                 "server": "c",
-                "error": str(e)
-            })
+                "vehicle_id": vehicle_id,
+                "error": error_msg
+            }),
+            qos=constants.MQTT_QOS
         )
-def handle_charge_request(data):
-    vehicle_id = data['vehicle_id']
-    action = data.get('action')
-    
-    if action == "request":
-        for point in charging_points:
-            if point['reserved'] < point['capacity']:
-                point['reserved'] += 1
-                response = {
-                    'status': 'READY',
-                    'point_id': point['id'],
-                    'vehicle_id': vehicle_id
-                }
-                break
-            else:
-                if vehicle_id not in point["queue"]:
-                    point['queue'].append(vehicle_id)
-                response = {
-                    'status': 'QUEUED',
-                    'position': len(point['queue']),
-                    'vehicle_id': vehicle_id
-                }
-        
-        mqtt_client.publish(
-            f"charging/{vehicle_id}/response",
-            json.dumps(response)
-        )
-        logger.info(f"Sent response to {vehicle_id}: {response}")
-    
-    elif action == "done":
-        for point in charging_points:
-            if point['id'] == data['point_id']:
-                point['reserved'] = max(0, point['reserved'] - 1)
-                if point['queue']:
-                    next_vehicle = point['queue'].pop(0)
-                    point['reserved'] += 1
-                    mqtt_client.publish(
-                        f"charging/{next_vehicle}/response",
-                        json.dumps({
-                            'status': 'READY',
-                            'point_id': point['id'],
-                            'vehicle_id': next_vehicle
-                        })
-                    )
-                break
 
-# Atualize on_message:
+def on_connect(client, userdata, flags, rc):
+    logger.info(f"Server C connected to MQTT broker with code {rc}")
+    client.subscribe(mqtt_topic)
+    client.subscribe(constants.TOPICO_RESERVA.format(server="server_c"))
+
 def on_message(client, userdata, msg):
     try:
         data = json.loads(msg.payload.decode())
         
-        if msg.topic == "vehicle/server_c/battery":
-            logger.info(f"Battery update: {data['vehicle_id']} - {data['battery_level']}%")
-            if data['battery_level'] < 20:
-                handle_low_battery(data['vehicle_id'], data.get('current_city'))
+        if msg.topic == mqtt_topic:
+            vehicle_id = data["vehicle_id"]
+            battery_level = data["battery_level"]
+            logger.info(f"Server C received battery update: {vehicle_id}, {battery_level}%")
+            
+            if battery_level < 30:
+                threading.Thread(target=handle_low_battery, args=(vehicle_id, data.get("current_city"), data.get("end_city"))).start()
         
-        elif msg.topic == "charging/server_c/request":
-            handle_charge_request(data)
+        elif msg.topic == constants.TOPICO_RESERVA.format(server="server_c"):
+            handle_charging_request(data)
             
     except Exception as e:
-        logger.error(f"Error processing message: {e}")
+        logger.error(f"Error processing MQTT message: {e}")
+
 mqtt_client = mqtt.Client()
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
@@ -195,7 +274,7 @@ def prepare_reservation():
     with charging_points_lock:
         for point in charging_points:
             if point["id"] == point_id:
-                if vehicle_id in point["queue"]:  # Idempotência
+                if vehicle_id in point["queue"]:
                     return jsonify({
                         "status": "QUEUED",
                         "position": point["queue"].index(vehicle_id) + 1,
@@ -215,7 +294,6 @@ def prepare_reservation():
                         "estimated_time": len(point["queue"]) * 30
                     })
         return jsonify({"status": "ABORT"}), 400
-    
 
 @app.route('/api/commit', methods=['POST'])
 def commit_reservation():
@@ -223,13 +301,13 @@ def commit_reservation():
     point_id = data.get("point_id")
     vehicle_id = data.get("vehicle_id")
     
-    for point in charging_points:
-        if point["id"] == point_id:
-            # Se estava na fila, remove
-            if vehicle_id in point["queue"]:
-                point["queue"].remove(vehicle_id)
-            return jsonify({"status": "COMMITTED"})
-    return jsonify({"status": "ABORTED"})
+    with charging_points_lock:
+        for point in charging_points:
+            if point["id"] == point_id:
+                if vehicle_id in point["queue"]:
+                    point["queue"].remove(vehicle_id)
+                return jsonify({"status": "COMMITTED"})
+        return jsonify({"status": "ABORTED"})
 
 @app.route('/api/abort', methods=['POST'])
 def abort_reservation():
@@ -237,19 +315,27 @@ def abort_reservation():
     point_id = data.get("point_id")
     vehicle_id = data.get("vehicle_id")
     
-    for point in charging_points:
-        if point["id"] == point_id:
-            if vehicle_id in point["queue"]:
-                point["queue"].remove(vehicle_id)
-            elif point["reserved"] > 0:
-                point["reserved"] -= 1
-                # Libera vaga para próximo da fila
-                if point["queue"]:
-                    next_vehicle = point["queue"].pop(0)
-                    point["reserved"] += 1
-                    # Notificar o próximo veículo (implementar lógica MQTT)
-            return jsonify({"status": "ABORTED"})
-    return jsonify({"status": "ABORTED"})
+    with charging_points_lock:
+        for point in charging_points:
+            if point["id"] == point_id:
+                if vehicle_id in point["queue"]:
+                    point["queue"].remove(vehicle_id)
+                elif point["reserved"] > 0:
+                    point["reserved"] -= 1
+                    if point["queue"]:
+                        next_vehicle = point["queue"].pop(0)
+                        point["reserved"] += 1
+                        mqtt_client.publish(
+                            constants.TOPICO_RESPOSTA.format(vehicle_id=next_vehicle),
+                            json.dumps({
+                                "status": "READY",
+                                "point_id": point_id,
+                                "vehicle_id": next_vehicle
+                            }),
+                            qos=constants.MQTT_QOS
+                        )
+                return jsonify({"status": "ABORTED"})
+        return jsonify({"status": "ABORTED"})
 
 @app.route('/api/queue_status/<point_id>', methods=['GET'])
 def queue_status(point_id):
@@ -275,7 +361,6 @@ def charging_status():
         })
     return jsonify(status)
 
-
 def plan_route_for_vehicle(vehicle_id, start, end):
     logger.info(f"Server C: Planning route for vehicle {vehicle_id} from {start} to {end}")
     try:
@@ -283,34 +368,34 @@ def plan_route_for_vehicle(vehicle_id, start, end):
         logger.info(f"Server C: Shortest path: {path}")
         
         servers = {
-            "company_a": "http://server_a:5000",
-            "company_b": "http://server_b:5001"
+            "company_a": constants.SERVERS["company_a"]["url"],
+            "company_b": constants.SERVERS["company_b"]["url"],
+            "company_d": constants.SERVERS["company_d"]["url"],
+            "company_e": constants.SERVERS["company_e"]["url"]
         }
         reservations = []
         all_prepared = True
         
-        # Phase 1: Prepare
         for i in range(len(path) - 1):
             current_city = path[i]
             reserved = False
             
-            # Tentar Company C primeiro
             for point in charging_points:
                 if point["location"] == current_city:
                     if point["reserved"] < point["capacity"]:
                         point["reserved"] += 1
                         reservations.append({
-                            "company": "company_a",
+                            "company": "company_c",
                             "point_id": point["id"],
                             "city": current_city,
                             "url": None
                         })
                         reserved = True
-                        logger.info(f"Server A: Prepared local reservation for {current_city}, point {point['id']}")
+                        logger.info(f"Server C: Prepared local reservation for {current_city}, point {point['id']}")
                         break
                     else:
                         prepare_response = requests.post(
-                            "http://server_a:5002/api/prepare",
+                            constants.SERVERS["company_c"]["url"] + "/api/prepare",
                             json={"point_id": point["id"], "vehicle_id": vehicle_id},
                             timeout=2
                         )
@@ -318,7 +403,7 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             result = prepare_response.json()
                             if result["status"] == "QUEUED":
                                 reservations.append({
-                                    "company": "company_a",
+                                    "company": "company_c",
                                     "point_id": point["id"],
                                     "city": current_city,
                                     "url": None,
@@ -327,7 +412,6 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                                 reserved = True
                                 break
             
-            # Tentar outras empresas
             if not reserved:
                 for company, url in servers.items():
                     try:
@@ -365,17 +449,16 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             if reserved:
                                 break
                     except Exception as e:
-                        logger.error(f"Server A: Error contacting {company}: {e}")
+                        logger.error(f"Server C: Error contacting {company}: {e}")
                         all_prepared = False
             
             if not reserved:
                 all_prepared = False
                 break
         
-        # Se falhou, abortar tudo
         if not all_prepared:
             for r in reservations:
-                if r["company"] == "company_a":
+                if r["company"] == "company_c":
                     for point in charging_points:
                         if point["id"] == r["point_id"]:
                             if "position" in r:
@@ -391,28 +474,27 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             timeout=2
                         )
                     except Exception as e:
-                        logger.error(f"Server A: Error aborting reservation: {e}")
+                        logger.error(f"Server C: Error aborting reservation: {e}")
             
             mqtt_client.publish(
-                f"charging/{vehicle_id}/response",
+                constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
                 json.dumps({
                     "status": "ERROR",
-                    "server": "a",
+                    "server": "c",
                     "error": "Could not reserve all required points"
-                })
+                }),
+                qos=constants.MQTT_QOS
             )
             return {"error": "Could not reserve all required points"}
 
-        # Phase 2: Commit
         for r in reservations:
-            if r["company"] == "company_a":
-                # Commit local
+            if r["company"] == "company_c":
                 for point in charging_points:
                     if point["id"] == r["point_id"] and "position" in r:
                         if vehicle_id in point["queue"]:
                             point["queue"].remove(vehicle_id)
                             point["reserved"] += 1
-                logger.info(f"Server A: Committed local reservation for {r['city']}, point {r['point_id']}")
+                logger.info(f"Server C: Committed local reservation for {r['city']}, point {r['point_id']}")
             elif r["url"]:
                 try:
                     requests.post(
@@ -421,16 +503,15 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                         timeout=2
                     )
                 except Exception as e:
-                    logger.error(f"Server A: Error committing reservation: {e}")
+                    logger.error(f"Server C: Error committing reservation: {e}")
         
-        # Notificar o carro
         mqtt_client.publish(
-            f"charging/{vehicle_id}/response",
+            constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
             json.dumps({
                 "status": "READY",
-                "point_id": reservations[0]["point_id"],  # Primeiro ponto da rota
+                "point_id": reservations[0]["point_id"],
                 "city": reservations[0]["city"],
-                "server": "a",
+                "server": "c",
                 "route": path,
                 "reservations": [{
                     "company": r["company"],
@@ -438,7 +519,8 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                     "city": r["city"],
                     "position": r.get("position", 0)
                 } for r in reservations]
-            })
+            }),
+            qos=constants.MQTT_QOS
         )
         
         return {
@@ -452,66 +534,17 @@ def plan_route_for_vehicle(vehicle_id, start, end):
         }
         
     except Exception as e:
-        logger.error(f"Server A: Route planning error: {e}")
+        logger.error(f"Server C: Route planning error: {e}")
         mqtt_client.publish(
-            f"charging/{vehicle_id}/response",
+            constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
             json.dumps({
                 "status": "ERROR",
-                "server": "a",
+                "server": "c",
                 "error": str(e)
-            })
+            }),
+            qos=constants.MQTT_QOS
         )
         return {"error": str(e)}
-
-
-def handle_charging_request(data):
-    vehicle_id = data["vehicle_id"]
-    action = data["action"]
-    
-    with charging_points_lock:
-        if action == "request":
-            logger.info(f"Processing charge request from {vehicle_id}")
-            for point in charging_points:
-                if point["location"] == data["location"]:
-                    if point["reserved"] < point["capacity"]:
-                        point["reserved"] += 1
-                        response = {
-                            "status": "READY",
-                            "point_id": point["id"],
-                            "vehicle_id": vehicle_id
-                        }
-                    else:
-                        if vehicle_id not in point["queue"]:
-                            point["queue"].append(vehicle_id)
-                        response = {
-                            "status": "QUEUED",
-                            "position": len(point["queue"]),
-                            "vehicle_id": vehicle_id
-                        }
-                    mqtt_client.publish(
-                        f"charging/{vehicle_id}/response",
-                        json.dumps(response),
-                        qos=1
-                    )
-                    break
-        elif action == "done":
-            point_id = data["point_id"]
-            for point in charging_points:
-                if point["id"] == point_id:
-                    point["reserved"] = max(0, point["reserved"] - 1)
-                    if point["queue"]:
-                        next_vehicle = point["queue"].pop(0)
-                        point["reserved"] += 1
-                        mqtt_client.publish(
-                            f"charging/{next_vehicle}/response",
-                            json.dumps({
-                                "status": "READY",
-                                "point_id": point_id,
-                                "vehicle_id": next_vehicle
-                            }),
-                            qos=1
-                        )
-                    break
 
 @app.route('/api/plan_route', methods=['POST'])
 def plan_route():
@@ -528,4 +561,4 @@ def plan_route():
     return jsonify(result)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5002)
+    app.run(host="0.0.0.0", port=constants.SERVIDOR_C)

@@ -2,6 +2,7 @@
 import yaml
 import random
 from constants import servers_port 
+
 def generate_docker_compose(num_cars):
     discharge_rates = ["fast", "normal", "slow"]
     services = {}

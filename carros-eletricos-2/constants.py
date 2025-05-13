@@ -2,6 +2,8 @@ PORT_BASE = 5000
 SERVIDOR_A = PORT_BASE
 SERVIDOR_B = PORT_BASE + 1
 SERVIDOR_C = PORT_BASE + 2
+SERVIDOR_D = PORT_BASE + 3
+SERVIDOR_E = PORT_BASE + 4
 
 # Tópicos MQTT
 TOPICO_BATERIA = "vehicle/{server}/battery"
@@ -26,11 +28,21 @@ SERVERS = {
     "company_c": {
         "url": f"http://server_c:{SERVIDOR_C}",
         "cities": ["Maceió", "Arapiraca"]
+    },
+    "company_d": {
+        "url": f"http://server_d:{SERVIDOR_D}",
+        "cities": ["Recife", "Caruaru"]
+    },
+    "company_e": {
+        "url": f"http://server_e:{SERVIDOR_E}",
+        "cities": ["João Pessoa", "Campina Grande"]
     }
 }
 
 servers_port = [
-        {"name": "a", "port": SERVIDOR_A},
-        {"name": "b", "port": SERVIDOR_B},
-        {"name": "c", "port": SERVIDOR_C}
-    ]
+    {"name": "a", "port": SERVIDOR_A},
+    {"name": "b", "port": SERVIDOR_B},
+    {"name": "c", "port": SERVIDOR_C},
+    {"name": "d", "port": SERVIDOR_D},
+    {"name": "e", "port": SERVIDOR_E}
+]
