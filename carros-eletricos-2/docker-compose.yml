@@ -6,6 +6,7 @@ services:
     build: .
     command: python car.py vehicle_1 fast
     depends_on:
+<<<<<<< Updated upstream
     - server_a
     networks:
     - charging_network
@@ -36,30 +37,107 @@ services:
     - FLASK_ENV=development
     networks:
     - charging_network
+=======
+      server_a:
+        condition: service_healthy
+      server_b:
+        condition: service_healthy
+      server_c:
+        condition: service_healthy
+    dns: &id001
+    - 8.8.8.8
+    - 8.8.4.4
+    environment:
+    - VEHICLE_ID=vehicle_1
+    - MQTT_BROKER=broker.hivemq.com
+    - MQTT_PORT=1883
+    - DISCHARGE_RATE=fast
+    networks: &id002
+    - charging_network
+    restart: on-failure
+    volumes: &id003
+    - ./:/app
+  server_a:
+    build: .
+    command: python -u server_a.py
+    dns: *id001
+    environment:
+    - FLASK_ENV=development
+    - MQTT_BROKER=broker.hivemq.com
+    - MQTT_PORT=1883
+    - SERVER_NAME=a
+    healthcheck:
+      interval: 10s
+      retries: 3
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:5000/api/charging_points
+      timeout: 5s
+    networks: *id002
+>>>>>>> Stashed changes
     ports:
     - 5000:5000
-    volumes:
-    - ./:/app
+    volumes: *id003
   server_b:
     build: .
+<<<<<<< Updated upstream
     command: python server_b.py
     environment:
     - FLASK_ENV=development
     networks:
     - charging_network
+=======
+    command: python -u server_b.py
+    dns: *id001
+    environment:
+    - FLASK_ENV=development
+    - MQTT_BROKER=broker.hivemq.com
+    - MQTT_PORT=1883
+    - SERVER_NAME=b
+    healthcheck:
+      interval: 10s
+      retries: 3
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:5001/api/charging_points
+      timeout: 5s
+    networks: *id002
+>>>>>>> Stashed changes
     ports:
     - 5001:5001
-    volumes:
-    - ./:/app
+    volumes: *id003
   server_c:
     build: .
+<<<<<<< Updated upstream
     command: python server_c.py
     environment:
     - FLASK_ENV=development
     networks:
     - charging_network
+=======
+    command: python -u server_c.py
+    dns: *id001
+    environment:
+    - FLASK_ENV=development
+    - MQTT_BROKER=broker.hivemq.com
+    - MQTT_PORT=1883
+    - SERVER_NAME=c
+    healthcheck:
+      interval: 10s
+      retries: 3
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:5002/api/charging_points
+      timeout: 5s
+    networks: *id002
+>>>>>>> Stashed changes
     ports:
     - 5002:5002
-    volumes:
-    - ./:/app
+    volumes: *id003
 version: '3.8'
