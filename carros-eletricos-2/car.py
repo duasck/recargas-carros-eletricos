@@ -61,6 +61,7 @@ def on_message(client, userdata, msg):
 def request_recharge(client, vehicle_id, current_city):
     server_info = CITY_STATE_MAP.get(current_city)
     if not server_info:
+        logger.error(f"No server found for city {current_city}")
         return
     
     payload = {
@@ -71,16 +72,17 @@ def request_recharge(client, vehicle_id, current_city):
     }
     
     topic = TOPICO_RESERVA.format(server=server_info['server'])
-    client.publish(topic, json.dumps(payload))
+    client.publish(topic, json.dumps(payload), qos=1)  # QoS=1 para entrega garantida
     logger.info(f"{vehicle_id} sent recharge request to {topic}")
 
+
 def simulate_vehicle(vehicle_id, discharge_rate):
-    current_city = random.choice(list(CITY_STATE_MAP.keys()))
-    end_city = random.choice(list(CITY_STATE_MAP.keys()))
-
-    while end_city == current_city:
-        end_city = random.choice(list(CITY_STATE_MAP.keys()))
-
+    # Definir uma rota predefinida
+    all_cities = list(CITY_STATE_MAP.keys())
+    route = random.sample(all_cities, len(all_cities))  # Rota aleatória
+    current_city_index = 0
+    current_city = route[current_city_index]
+    
     userdata = {
         "vehicle_id": vehicle_id,
         "battery_level": 40,
@@ -88,11 +90,13 @@ def simulate_vehicle(vehicle_id, discharge_rate):
         "recharge_status": None,
         "discharge_rate": discharge_rate,
         "logger": logging.getLogger(f"{vehicle_id}"),
-        "end_city": end_city,
-        "has_requested_recharge": False  # Adicione esta flag
+        "route": route,
+        "current_city_index": current_city_index,
+        "has_requested_recharge": False,
+        "is_waiting": False
     }
     
-    logger.info(f"{vehicle_id} - Starting: {userdata['current_city']} Ending: {userdata['end_city']}")
+    logger.info(f"{vehicle_id} route: {route}")
 
     client = mqtt.Client(userdata=userdata)
     client.on_connect = on_connect
@@ -103,60 +107,63 @@ def simulate_vehicle(vehicle_id, discharge_rate):
         client.loop_start()
 
         while True:
-            # 1. Atualiza nível da bateria
-            userdata['battery_level'] -= random.uniform(*RATE_RANGES[discharge_rate])
-            userdata['battery_level'] = max(0, userdata['battery_level'])
-
-            # 2. Publica estado da bateria
-            server_topic = TOPICO_BATERIA.format(server=CITY_STATE_MAP[userdata['current_city']]['server'])
-            if userdata['battery_level'] <= 30:
-                client.publish(server_topic, json.dumps({
-                    "vehicle_id": vehicle_id,
-                    "battery_level": round(userdata['battery_level'], 2),
-                    "current_city": userdata['current_city'],
-                    "end_city": userdata['end_city']  # Adicione esta linha
-                }))
+            # Atualizar bateria
+            if not userdata['is_waiting'] and not (userdata['recharge_status'] and userdata['recharge_status'].get('status') == 'READY'):
+                drain = random.uniform(*RATE_RANGES[discharge_rate])
+                userdata['battery_level'] = max(0.1, userdata['battery_level'] - drain)
             
-            logger.info(f"{vehicle_id} battery: {userdata['battery_level']:.2f}%")
-
-            # 3. Lógica de recarga
+            # Lógica de recarga
             if (userdata['battery_level'] <= 20 and 
                 not userdata['recharge_status'] and 
-                not userdata['has_requested_recharge']):  # Modifique esta condição
+                not userdata['has_requested_recharge']):
                 request_recharge(client, vehicle_id, userdata['current_city'])
-                userdata['has_requested_recharge'] = True  # Marque que já fez a solicitação
+                userdata['has_requested_recharge'] = True
+                userdata['is_waiting'] = True
+                logger.info(f"{vehicle_id} requested recharge at {userdata['current_city']}")
             
-            # 4. Se está na fila
-            elif userdata['recharge_status'] and userdata['recharge_status'].get('status') == 'QUEUED':
-                userdata['battery_level'] -= 0.2  # Descarga mínima enquanto espera
-                logger.info(f"{vehicle_id} in queue (position {userdata['recharge_status'].get('position')})")
+            # Comportamento enquanto espera ou carrega
+            elif userdata['is_waiting'] or (userdata['recharge_status'] and userdata['recharge_status'].get('status') in ['QUEUED', 'READY']):
+                behavior = random.choice(['stationary', 'moving'])
+                if behavior == 'stationary':
+                    logger.info(f"{vehicle_id} is stationary at {userdata['current_city']}")
+                else:
+                    drain = random.uniform(0.1, 0.3)
+                    userdata['battery_level'] = max(0.1, userdata['battery_level'] - drain)
+                    logger.info(f"{vehicle_id} is moving near {userdata['current_city']}, battery at {userdata['battery_level']:.2f}%")
             
-            # 5. Se está carregando
-            elif userdata['recharge_status'] and userdata['recharge_status'].get('status') == 'READY':
-                userdata['battery_level'] = min(100, userdata['battery_level'] + 15)  # Carrega 15% por ciclo
+            # Atualizar posição na rota
+            if not userdata['is_waiting'] and not userdata['recharge_status']:
+                # Avançar para a próxima cidade após um tempo
+                if random.random() < 0.1:  # 10% de chance de mudar de cidade por ciclo
+                    userdata['current_city_index'] = (userdata['current_city_index'] + 1) % len(route)
+                    userdata['current_city'] = route[userdata['current_city_index']]
+                    logger.info(f"{vehicle_id} moved to {userdata['current_city']}")
+            
+            # Lógica de carregamento
+            if userdata['recharge_status'] and userdata['recharge_status'].get('status') == 'READY':
+                userdata['battery_level'] = min(100, userdata['battery_level'] + 15)
+                logger.info(f"{vehicle_id} charging at {userdata['current_city']}, battery: {userdata['battery_level']:.2f}%")
                 
                 if userdata['battery_level'] >= 95:
-                    # Notifica término
                     payload = {
                         "vehicle_id": vehicle_id,
                         "point_id": userdata['recharge_status']['point_id'],
                         "action": "done"
                     }
-
                     topic = TOPICO_RESERVA.format(server=CITY_STATE_MAP[userdata['current_city']]['server'])
-
-                    client.publish(topic, json.dumps(payload))
+                    client.publish(topic, json.dumps(payload), qos=1)
+                    logger.info(f"{vehicle_id} finished charging at {userdata['current_city']}")
                     userdata['recharge_status'] = None
-                    userdata['has_requested_recharge'] = False  # Reset a flag quando termina de carregar
-                    userdata['current_city'] = random.choice(list(CITY_STATE_MAP.keys()))
-                    logger.info(f"{vehicle_id} finished charging, moving to {userdata['current_city']}")
-
+                    userdata['has_requested_recharge'] = False
+                    userdata['is_waiting'] = False
+            
             time.sleep(5)
-
+            
     except Exception as e:
         logger.error(f"Error in vehicle simulation: {e}")
     finally:
         client.loop_stop()
+        
 
 if __name__ == "__main__":
     # Obtém variáveis de ambiente ou argumentos

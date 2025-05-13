@@ -6,6 +6,9 @@ import networkx as nx
 import logging
 import threading
 
+# Adicionar lock global
+charging_points_lock = threading.Lock()
+
 app = Flask(__name__)
 
 # Logging setup
@@ -189,25 +192,30 @@ def prepare_reservation():
     if not point_id or not vehicle_id:
         return jsonify({"status": "ABORT"}), 400
     
-    for point in charging_points:
-        if point["id"] == point_id:
-            if point["reserved"] < point["capacity"]:
-                point["reserved"] += 1
-                return jsonify({
-                    "status": "READY",
-                    "position": 0  # Entra direto no posto
-                })
-            else:
-                # Adiciona na fila
-                position = len(point["queue"]) + 1
-                if vehicle_id not in point["queue"]:
+    with charging_points_lock:
+        for point in charging_points:
+            if point["id"] == point_id:
+                if vehicle_id in point["queue"]:  # Idempotência
+                    return jsonify({
+                        "status": "QUEUED",
+                        "position": point["queue"].index(vehicle_id) + 1,
+                        "estimated_time": (point["queue"].index(vehicle_id) + 1) * 30
+                    })
+                if point["reserved"] < point["capacity"]:
+                    point["reserved"] += 1
+                    return jsonify({
+                        "status": "READY",
+                        "position": 0
+                    })
+                else:
                     point["queue"].append(vehicle_id)
-                return jsonify({
-                    "status": "QUEUED",
-                    "position": position,
-                    "estimated_time": position * 30  # 30 minutos por carro
-                })
-    return jsonify({"status": "ABORT"}), 400
+                    return jsonify({
+                        "status": "QUEUED",
+                        "position": len(point["queue"]),
+                        "estimated_time": len(point["queue"]) * 30
+                    })
+        return jsonify({"status": "ABORT"}), 400
+    
 
 @app.route('/api/commit', methods=['POST'])
 def commit_reservation():
@@ -281,28 +289,28 @@ def plan_route_for_vehicle(vehicle_id, start, end):
         reservations = []
         all_prepared = True
         
-        # Phase 1: Prepare - prioriza pontos de Alagoas
+        # Phase 1: Prepare
         for i in range(len(path) - 1):
             current_city = path[i]
             reserved = False
             
-            # Try Company C (local) first
+            # Tentar Company C primeiro
             for point in charging_points:
                 if point["location"] == current_city:
                     if point["reserved"] < point["capacity"]:
                         point["reserved"] += 1
                         reservations.append({
-                            "company": "company_c",
+                            "company": "company_a",
                             "point_id": point["id"],
                             "city": current_city,
                             "url": None
                         })
                         reserved = True
-                        logger.info(f"Server C: Prepared local reservation for {current_city}, point {point['id']}")
+                        logger.info(f"Server A: Prepared local reservation for {current_city}, point {point['id']}")
                         break
                     else:
                         prepare_response = requests.post(
-                            "http://server_c:5002/api/prepare",
+                            "http://server_a:5002/api/prepare",
                             json={"point_id": point["id"], "vehicle_id": vehicle_id},
                             timeout=2
                         )
@@ -310,7 +318,7 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             result = prepare_response.json()
                             if result["status"] == "QUEUED":
                                 reservations.append({
-                                    "company": "company_c",
+                                    "company": "company_a",
                                     "point_id": point["id"],
                                     "city": current_city,
                                     "url": None,
@@ -319,7 +327,7 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                                 reserved = True
                                 break
             
-            # Try other companies if needed
+            # Tentar outras empresas
             if not reserved:
                 for company, url in servers.items():
                     try:
@@ -357,17 +365,17 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             if reserved:
                                 break
                     except Exception as e:
-                        logger.error(f"Server C: Error contacting {company}: {e}")
+                        logger.error(f"Server A: Error contacting {company}: {e}")
                         all_prepared = False
             
             if not reserved:
-                logger.error(f"Server C: No available points for {current_city}")
                 all_prepared = False
                 break
         
+        # Se falhou, abortar tudo
         if not all_prepared:
             for r in reservations:
-                if r["company"] == "company_c":
+                if r["company"] == "company_a":
                     for point in charging_points:
                         if point["id"] == r["point_id"]:
                             if "position" in r:
@@ -383,14 +391,28 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                             timeout=2
                         )
                     except Exception as e:
-                        logger.error(f"Server C: Error aborting reservation: {e}")
+                        logger.error(f"Server A: Error aborting reservation: {e}")
             
+            mqtt_client.publish(
+                f"charging/{vehicle_id}/response",
+                json.dumps({
+                    "status": "ERROR",
+                    "server": "a",
+                    "error": "Could not reserve all required points"
+                })
+            )
             return {"error": "Could not reserve all required points"}
 
         # Phase 2: Commit
         for r in reservations:
-            if r["company"] == "company_c":
-                logger.info(f"Server C: Committed local reservation for {r['city']}, point {r['point_id']}")
+            if r["company"] == "company_a":
+                # Commit local
+                for point in charging_points:
+                    if point["id"] == r["point_id"] and "position" in r:
+                        if vehicle_id in point["queue"]:
+                            point["queue"].remove(vehicle_id)
+                            point["reserved"] += 1
+                logger.info(f"Server A: Committed local reservation for {r['city']}, point {r['point_id']}")
             elif r["url"]:
                 try:
                     requests.post(
@@ -399,7 +421,25 @@ def plan_route_for_vehicle(vehicle_id, start, end):
                         timeout=2
                     )
                 except Exception as e:
-                    logger.error(f"Server C: Error committing reservation: {e}")
+                    logger.error(f"Server A: Error committing reservation: {e}")
+        
+        # Notificar o carro
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps({
+                "status": "READY",
+                "point_id": reservations[0]["point_id"],  # Primeiro ponto da rota
+                "city": reservations[0]["city"],
+                "server": "a",
+                "route": path,
+                "reservations": [{
+                    "company": r["company"],
+                    "point_id": r["point_id"],
+                    "city": r["city"],
+                    "position": r.get("position", 0)
+                } for r in reservations]
+            })
+        )
         
         return {
             "path": path,
@@ -412,9 +452,67 @@ def plan_route_for_vehicle(vehicle_id, start, end):
         }
         
     except Exception as e:
-        logger.error(f"Server C: Route planning error: {e}")
+        logger.error(f"Server A: Route planning error: {e}")
+        mqtt_client.publish(
+            f"charging/{vehicle_id}/response",
+            json.dumps({
+                "status": "ERROR",
+                "server": "a",
+                "error": str(e)
+            })
+        )
         return {"error": str(e)}
+
+
+def handle_charging_request(data):
+    vehicle_id = data["vehicle_id"]
+    action = data["action"]
     
+    with charging_points_lock:
+        if action == "request":
+            logger.info(f"Processing charge request from {vehicle_id}")
+            for point in charging_points:
+                if point["location"] == data["location"]:
+                    if point["reserved"] < point["capacity"]:
+                        point["reserved"] += 1
+                        response = {
+                            "status": "READY",
+                            "point_id": point["id"],
+                            "vehicle_id": vehicle_id
+                        }
+                    else:
+                        if vehicle_id not in point["queue"]:
+                            point["queue"].append(vehicle_id)
+                        response = {
+                            "status": "QUEUED",
+                            "position": len(point["queue"]),
+                            "vehicle_id": vehicle_id
+                        }
+                    mqtt_client.publish(
+                        f"charging/{vehicle_id}/response",
+                        json.dumps(response),
+                        qos=1
+                    )
+                    break
+        elif action == "done":
+            point_id = data["point_id"]
+            for point in charging_points:
+                if point["id"] == point_id:
+                    point["reserved"] = max(0, point["reserved"] - 1)
+                    if point["queue"]:
+                        next_vehicle = point["queue"].pop(0)
+                        point["reserved"] += 1
+                        mqtt_client.publish(
+                            f"charging/{next_vehicle}/response",
+                            json.dumps({
+                                "status": "READY",
+                                "point_id": point_id,
+                                "vehicle_id": next_vehicle
+                            }),
+                            qos=1
+                        )
+                    break
+
 @app.route('/api/plan_route', methods=['POST'])
 def plan_route():
     data = request.json

@@ -10,6 +10,8 @@ TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
 
 # Configurações de tempo
 RESERVATION_TIMEOUT = 300  # 5 minutos em segundos
+MQTT_QOS = 1  # Qualidade de serviço para MQTT
+WAITING_TIMEOUT = 600  # 10 minutos para esperar resposta do servidor
 
 # Servidores disponíveis
 SERVERS = {
@@ -26,3 +28,9 @@ SERVERS = {
         "cities": ["Maceió", "Arapiraca"]
     }
 }
+
+servers_port = [
+        {"name": "a", "port": SERVIDOR_A},
+        {"name": "b", "port": SERVIDOR_B},
+        {"name": "c", "port": SERVIDOR_C}
+    ]

@@ -1,66 +1,45 @@
 #!/usr/bin/env python3
 import yaml
 import random
-
+from constants import servers_port 
 def generate_docker_compose(num_cars):
     discharge_rates = ["fast", "normal", "slow"]
-    services = {
-        "server_a": {
+    services = {}
+
+    # Gerar serviços para os servidores dinamicamente
+    servers = servers_port
+    for i, server in enumerate(servers):
+        server_name = server["name"]
+        port = server["port"]
+        services[f"server_{server_name}"] = {
             "build": ".",
-            "command": "python server_a.py",
-            "ports": ["5000:5000"],
+            "command": f"python -u server_{server_name}.py",  # Usar -u para saída não bufferizada
+            "ports": [f"{port}:{port}"],
             "volumes": ["./:/app"],
             "environment": [
                 "FLASK_ENV=development",
                 "MQTT_BROKER=broker.hivemq.com",
                 "MQTT_PORT=1883",
-                "SERVER_NAME=a"
-            ],
-            "networks": ["charging_network"]
-        },
-        "server_b": {
-            "build": ".",
-            "command": "python server_b.py",
-            "ports": ["5001:5001"],
-            "volumes": ["./:/app"],
-            "environment": [
-                "FLASK_ENV=development",
-                "MQTT_BROKER=broker.hivemq.com",
-                "MQTT_PORT=1883",
-                "SERVER_NAME=b"
-            ],
-            "networks": ["charging_network"]
-        },
-        "server_c": {
-            "build": ".",
-            "command": "python server_c.py",
-            "ports": ["5002:5002"],
-            "volumes": ["./:/app"],
-            "environment": [
-                "FLASK_ENV=development",
-                "MQTT_BROKER=broker.hivemq.com",
-                "MQTT_PORT=1883",
-                "SERVER_NAME=c"
+                f"SERVER_NAME={server_name}"
             ],
             "networks": ["charging_network"]
         }
-    }
 
-    # Generate N car services
+    # Gerar serviços para os carros
     for i in range(1, num_cars + 1):
         vehicle_id = f"vehicle_{i}"
         discharge_rate = random.choice(discharge_rates)
         services[f"car_{i}"] = {
             "build": ".",
-            "command": f"python car.py {vehicle_id} {discharge_rate}",
+            "command": f"python -u car.py {vehicle_id} {discharge_rate}",  # Usar -u para saída não bufferizada
             "volumes": ["./:/app"],
             "environment": [
                 f"VEHICLE_ID={vehicle_id}",
                 "MQTT_BROKER=broker.hivemq.com",
                 "MQTT_PORT=1883",
-                f"DISCHARGE_RATE={discharge_rate}"  # Adicionado
+                f"DISCHARGE_RATE={discharge_rate}"
             ],
-            "depends_on": ["server_a", "server_b", "server_c"],
+            "depends_on": [f"server_{s['name']}" for s in servers],  # Dependência de todos os servidores
             "networks": ["charging_network"]
         }
 
