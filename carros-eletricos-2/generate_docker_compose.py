@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 import yaml
 import random
-from constants import servers_port 
+from constants import servers_port
 
-def generate_docker_compose(num_cars):
+def generate_docker_compose(num_cars=3):
     discharge_rates = ["fast", "normal", "slow"]
     services = {}
 
-    # Gerar serviços para os servidores dinamicamente
-    servers = servers_port
-    for i, server in enumerate(servers):
+    # Gerar serviços para os servidores
+    for server in servers_port:
         server_name = server["name"]
         port = server["port"]
         services[f"server_{server_name}"] = {
             "build": ".",
-            "command": f"python -u server_{server_name}.py",  # Usar -u para saída não bufferizada
+            "command": f"python -u server_{server_name}.py",
             "ports": [f"{port}:{port}"],
             "volumes": ["./:/app"],
             "environment": [
@@ -32,7 +31,7 @@ def generate_docker_compose(num_cars):
         discharge_rate = random.choice(discharge_rates)
         services[f"car_{i}"] = {
             "build": ".",
-            "command": f"python -u car.py {vehicle_id} {discharge_rate}",  # Usar -u para saída não bufferizada
+            "command": f"python -u car.py {vehicle_id} {discharge_rate}",
             "volumes": ["./:/app"],
             "environment": [
                 f"VEHICLE_ID={vehicle_id}",
@@ -40,7 +39,7 @@ def generate_docker_compose(num_cars):
                 "MQTT_PORT=1883",
                 f"DISCHARGE_RATE={discharge_rate}"
             ],
-            "depends_on": [f"server_{s['name']}" for s in servers],  # Dependência de todos os servidores
+            "depends_on": [f"server_{s['name']}" for s in servers_port],
             "networks": ["charging_network"]
         }
 
@@ -55,6 +54,6 @@ def generate_docker_compose(num_cars):
 
 if __name__ == "__main__":
     import sys
-    num_cars = int(sys.argv[1]) if len(sys.argv) > 1 else 3  # Default to 3 cars
+    num_cars = int(sys.argv[1]) if len(sys.argv) > 1 else 3
     generate_docker_compose(num_cars)
     print(f"Generated docker-compose.yml with {num_cars} cars")

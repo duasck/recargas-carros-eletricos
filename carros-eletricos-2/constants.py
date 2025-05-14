@@ -14,6 +14,14 @@ TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
 RESERVATION_TIMEOUT = 300  # 5 minutos em segundos
 MQTT_QOS = 1  # Qualidade de serviço para MQTT
 WAITING_TIMEOUT = 600  # 10 minutos para esperar resposta do servidor
+TRAVEL_SPEED = 1.0  # Segundos por unidade de peso (1 km = 1 segundo)
+
+# Consumo de bateria por km (ajustado pela taxa de descarga)
+BATTERY_CONSUMPTION = {
+    "fast": 0.2,   # 0.2% por km
+    "normal": 0.1, # 0.1% por km
+    "slow": 0.05   # 0.05% por km
+}
 
 # Servidores disponíveis
 SERVERS = {
@@ -40,9 +48,23 @@ SERVERS = {
 }
 
 servers_port = [
-    {"name": "a", "port": SERVIDOR_A},
-    {"name": "b", "port": SERVIDOR_B},
-    {"name": "c", "port": SERVIDOR_C},
-    {"name": "d", "port": SERVIDOR_D},
-    {"name": "e", "port": SERVIDOR_E}
+    {"name": "a", "port": SERVIDOR_A, "company": "company_a"},
+    {"name": "b", "port": SERVIDOR_B, "company": "company_b"},
+    {"name": "c", "port": SERVIDOR_C, "company": "company_c"},
+    {"name": "d", "port": SERVIDOR_D, "company": "company_d"},
+    {"name": "e", "port": SERVIDOR_E, "company": "company_e"}
 ]
+
+# Mapeamento de cidades para estados e servidores
+CITY_STATE_MAP = {
+    "Salvador": {"state": "BA", "server": "server_a"},
+    "Feira de Santana": {"state": "BA", "server": "server_a"},
+    "Aracaju": {"state": "SE", "server": "server_b"},
+    "Itabaiana": {"state": "SE", "server": "server_b"},
+    "Maceió": {"state": "AL", "server": "server_c"},
+    "Arapiraca": {"state": "AL", "server": "server_c"},
+    "Recife": {"state": "PE", "server": "server_d"},
+    "Caruaru": {"state": "PE", "server": "server_d"},
+    "João Pessoa": {"state": "PB", "server": "server_e"},
+    "Campina Grande": {"state": "PB", "server": "server_e"}
+}
