@@ -1,0 +1,161 @@
+openapi: 3.0.3
+info:
+  title: Electric Vehicle Charging System API
+  description: API for managing electric vehicle charging reservations and route planning
+  version: 1.0.0
+servers:
+  - url: http://server_{a,b,c,d,e}:{port}
+    description: Server for each company (a, b, c, d, e)
+    variables:
+      port:
+        default: "5000-5004"
+paths:
+  /api/charging_points:
+    get:
+      summary: Retrieve available charging points
+      responses:
+        '200':
+          description: List of charging points
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  company_{a,b,c,d,e}:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        location: { type: string }
+                        capacity: { type: integer }
+                        reserved: { type: integer }
+                        queue: { type: array, items: { type: string } }
+  /api/prepare:
+    post:
+      summary: Prepare a charging reservation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                point_id: { type: string }
+                vehicle_id: { type: string }
+      responses:
+        '200':
+          description: Reservation status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: ["READY", "QUEUED"] }
+                  position: { type: integer }
+                  estimated_time: { type: integer }
+        '400':
+          description: Invalid request
+  /api/commit:
+    post:
+      summary: Commit a charging reservation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                point_id: { type: string }
+                vehicle_id: { type: string }
+      responses:
+        '200':
+          description: Reservation committed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: ["COMMITTED", "ABORTED"] }
+  /api/abort:
+    post:
+      summary: Abort a charging reservation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                point_id: { type: string }
+                vehicle_id: { type: string }
+      responses:
+        '200':
+          description: Reservation aborted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: ["ABORTED"] }
+  /api/queue_status/{point_id}:
+    get:
+      summary: Get queue status for a charging point
+      parameters:
+        - name: point_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Queue status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reserved: { type: integer }
+                  queue_size: { type: integer }
+                  queue: { type: array, items: { type: string } }
+        '404':
+          description: Point not found
+  /api/charging_status:
+    get:
+      summary: Get status of all charging points
+      responses:
+        '200':
+          description: Charging points status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    location: { type: string }
+                    reserved: { type: integer }
+                    queue_size: { type: integer }
+                    queue: { type: array, items: { type: string } }
+  /api/plan_route:
+    post:
+      summary: Plan a route for a vehicle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicle_id: { type: string }
+                start: { type: string }
+                end: { type: string }
+      responses:
+        '200':
+          description: Route plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  path: { type: array, items: { type: string } }
+                  reservations: { type: array, items: { type: object, properties: { company: { type: string }, point_id: { type: string }, city: { type: string }, position: { type: integer } } } }
+        '400':
+          description: Invalid request
