@@ -9,6 +9,7 @@ SERVIDOR_E = PORT_BASE + 4
 TOPICO_BATERIA = "vehicle/{server}/battery"
 TOPICO_RESERVA = "charging/{server}/request"
 TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
+TOPICO_ROUTE_REQUEST = "charging/{server}/route_request"
 
 # Configurações de tempo
 RESERVATION_TIMEOUT = 300  # 5 minutos em segundos

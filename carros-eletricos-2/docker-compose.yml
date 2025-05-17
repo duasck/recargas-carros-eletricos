@@ -4,7 +4,7 @@ networks:
 services:
   car_1:
     build: .
-    command: python -u car.py vehicle_1 slow
+    command: python -u car.py vehicle_1 fast
     depends_on:
     - server_a
     - server_b
@@ -15,14 +15,14 @@ services:
     - VEHICLE_ID=vehicle_1
     - MQTT_BROKER=broker.hivemq.com
     - MQTT_PORT=1883
-    - DISCHARGE_RATE=slow
+    - DISCHARGE_RATE=fast
     networks:
     - charging_network
     volumes:
     - ./:/app
   car_10:
     build: .
-    command: python -u car.py vehicle_10 slow
+    command: python -u car.py vehicle_10 fast
     depends_on:
     - server_a
     - server_b
@@ -33,104 +33,14 @@ services:
     - VEHICLE_ID=vehicle_10
     - MQTT_BROKER=broker.hivemq.com
     - MQTT_PORT=1883
-    - DISCHARGE_RATE=slow
-    networks:
-    - charging_network
-    volumes:
-    - ./:/app
-  car_11:
-    build: .
-    command: python -u car.py vehicle_11 normal
-    depends_on:
-    - server_a
-    - server_b
-    - server_c
-    - server_d
-    - server_e
-    environment:
-    - VEHICLE_ID=vehicle_11
-    - MQTT_BROKER=broker.hivemq.com
-    - MQTT_PORT=1883
-    - DISCHARGE_RATE=normal
-    networks:
-    - charging_network
-    volumes:
-    - ./:/app
-  car_12:
-    build: .
-    command: python -u car.py vehicle_12 slow
-    depends_on:
-    - server_a
-    - server_b
-    - server_c
-    - server_d
-    - server_e
-    environment:
-    - VEHICLE_ID=vehicle_12
-    - MQTT_BROKER=broker.hivemq.com
-    - MQTT_PORT=1883
-    - DISCHARGE_RATE=slow
-    networks:
-    - charging_network
-    volumes:
-    - ./:/app
-  car_13:
-    build: .
-    command: python -u car.py vehicle_13 slow
-    depends_on:
-    - server_a
-    - server_b
-    - server_c
-    - server_d
-    - server_e
-    environment:
-    - VEHICLE_ID=vehicle_13
-    - MQTT_BROKER=broker.hivemq.com
-    - MQTT_PORT=1883
-    - DISCHARGE_RATE=slow
-    networks:
-    - charging_network
-    volumes:
-    - ./:/app
-  car_14:
-    build: .
-    command: python -u car.py vehicle_14 fast
-    depends_on:
-    - server_a
-    - server_b
-    - server_c
-    - server_d
-    - server_e
-    environment:
-    - VEHICLE_ID=vehicle_14
-    - MQTT_BROKER=broker.hivemq.com
-    - MQTT_PORT=1883
     - DISCHARGE_RATE=fast
-    networks:
-    - charging_network
-    volumes:
-    - ./:/app
-  car_15:
-    build: .
-    command: python -u car.py vehicle_15 slow
-    depends_on:
-    - server_a
-    - server_b
-    - server_c
-    - server_d
-    - server_e
-    environment:
-    - VEHICLE_ID=vehicle_15
-    - MQTT_BROKER=broker.hivemq.com
-    - MQTT_PORT=1883
-    - DISCHARGE_RATE=slow
     networks:
     - charging_network
     volumes:
     - ./:/app
   car_2:
     build: .
-    command: python -u car.py vehicle_2 slow
+    command: python -u car.py vehicle_2 normal
     depends_on:
     - server_a
     - server_b
@@ -141,7 +51,7 @@ services:
     - VEHICLE_ID=vehicle_2
     - MQTT_BROKER=broker.hivemq.com
     - MQTT_PORT=1883
-    - DISCHARGE_RATE=slow
+    - DISCHARGE_RATE=normal
     networks:
     - charging_network
     volumes:
@@ -166,7 +76,7 @@ services:
     - ./:/app
   car_4:
     build: .
-    command: python -u car.py vehicle_4 normal
+    command: python -u car.py vehicle_4 slow
     depends_on:
     - server_a
     - server_b
@@ -177,7 +87,7 @@ services:
     - VEHICLE_ID=vehicle_4
     - MQTT_BROKER=broker.hivemq.com
     - MQTT_PORT=1883
-    - DISCHARGE_RATE=normal
+    - DISCHARGE_RATE=slow
     networks:
     - charging_network
     volumes:
@@ -202,7 +112,7 @@ services:
     - ./:/app
   car_6:
     build: .
-    command: python -u car.py vehicle_6 fast
+    command: python -u car.py vehicle_6 normal
     depends_on:
     - server_a
     - server_b
@@ -213,14 +123,14 @@ services:
     - VEHICLE_ID=vehicle_6
     - MQTT_BROKER=broker.hivemq.com
     - MQTT_PORT=1883
-    - DISCHARGE_RATE=fast
+    - DISCHARGE_RATE=normal
     networks:
     - charging_network
     volumes:
     - ./:/app
   car_7:
     build: .
-    command: python -u car.py vehicle_7 slow
+    command: python -u car.py vehicle_7 fast
     depends_on:
     - server_a
     - server_b
@@ -231,14 +141,14 @@ services:
     - VEHICLE_ID=vehicle_7
     - MQTT_BROKER=broker.hivemq.com
     - MQTT_PORT=1883
-    - DISCHARGE_RATE=slow
+    - DISCHARGE_RATE=fast
     networks:
     - charging_network
     volumes:
     - ./:/app
   car_8:
     build: .
-    command: python -u car.py vehicle_8 fast
+    command: python -u car.py vehicle_8 slow
     depends_on:
     - server_a
     - server_b
@@ -249,14 +159,14 @@ services:
     - VEHICLE_ID=vehicle_8
     - MQTT_BROKER=broker.hivemq.com
     - MQTT_PORT=1883
-    - DISCHARGE_RATE=fast
+    - DISCHARGE_RATE=slow
     networks:
     - charging_network
     volumes:
     - ./:/app
   car_9:
     build: .
-    command: python -u car.py vehicle_9 fast
+    command: python -u car.py vehicle_9 slow
     depends_on:
     - server_a
     - server_b
@@ -267,7 +177,7 @@ services:
     - VEHICLE_ID=vehicle_9
     - MQTT_BROKER=broker.hivemq.com
     - MQTT_PORT=1883
-    - DISCHARGE_RATE=fast
+    - DISCHARGE_RATE=slow
     networks:
     - charging_network
     volumes:

@@ -80,6 +80,7 @@ def create_server(server_config):
                         )
                         logger.info(f"Queue status for {point['id']} ({point['location']}): {point['queue']}")
                         break
+
             elif action == "done":
                 point_id = data["point_id"]
                 for point in charging_points:
@@ -102,16 +103,35 @@ def create_server(server_config):
                         logger.info(f"Queue status for {point['id']} ({point['location']}): {point['queue']}")
                         break
 
+    def handle_route_request(data):
+        vehicle_id = data["vehicle_id"]
+        start = data["start"]
+        end = data["end"]
+        
+        logger.info(f"Server {server_name.upper()}: Received route request from {vehicle_id} for {start} to {end}")
+        result = plan_route_for_vehicle(vehicle_id, start, end)
+        
+        response_topic = constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id)
+        if "error" in result:
+            response = {"status": "ERROR", "error": result["error"]}
+        else:
+            response = {"status": "READY", "route": result["path"], "reservations": result["reservations"]}
+        
+        mqtt_client.publish(response_topic, json.dumps(response), qos=constants.MQTT_QOS)
+        logger.info(f"Server {server_name.upper()}: Sent route response to {vehicle_id}")
+
     def on_connect(client, userdata, flags, rc):
         logger.info(f"Server {server_name.upper()} connected to MQTT broker with code {rc}")
         client.subscribe(mqtt_topic_battery)
         client.subscribe(mqtt_topic_request)
-
+        client.subscribe(constants.TOPICO_ROUTE_REQUEST.format(server=f"server_{server_name}"))
     def on_message(client, userdata, msg):
         try:
             data = json.loads(msg.payload.decode())
             if msg.topic == mqtt_topic_request:
                 handle_charging_request(data)
+            elif msg.topic == constants.TOPICO_ROUTE_REQUEST.format(server=f"server_{server_name}"):
+                handle_route_request(data)
         except Exception as e:
             logger.error(f"Error processing MQTT message: {e}")
 
