@@ -1,23 +1,23 @@
 from global_utils import constants
 from generics import create_server
 
-# especific config for the server d
+# especific config for the server e
 server_config = {
-    "company": "company_d",
-    "name": "d",
-    "port": constants.SERVIDOR_D,
+    "company": "company_e",
+    "name": "e",
+    "port": constants.SERVIDOR_E,
     "charging_points": [
         {
-            "id": "PE1",
-            "location": "Recife",
-            "capacity": 3,
+            "id": "PB1",
+            "location": "João Pessoa",
+            "capacity": 2,
             "reserved": 0,
             "queue": []
         },
         {
-            "id": "PE2",
-            "location": "Caruaru",
-            "capacity": 2,
+            "id": "PB2",
+            "location": "Campina Grande",
+            "capacity": 1,
             "reserved": 0,
             "queue": []
         }
