@@ -5,6 +5,8 @@ SERVIDOR_C = PORT_BASE + 2
 SERVIDOR_D = PORT_BASE + 3
 SERVIDOR_E = PORT_BASE + 4
 
+
+PORTA_MQTT = 1883
 # Tópicos MQTT
 TOPICO_BATERIA = "vehicle/{server}/battery"
 TOPICO_RESERVA = "charging/{server}/request"
@@ -19,9 +21,9 @@ TRAVEL_SPEED = 1.0  # Segundos por unidade de peso (1 km = 1 segundo)
 
 # Consumo de bateria por km (ajustado pela taxa de descarga)
 BATTERY_CONSUMPTION = {
-    "fast": 0.2,   # 0.2% por km
-    "normal": 0.1, # 0.1% por km
-    "slow": 0.05   # 0.05% por km
+    "fast": 1,  # 10% por 100 km
+    "normal": 0.5,  # 5% por 100 km
+    "slow": 0.25  # 2.5% por 100 km
 }
 
 # Servidores disponíveis
@@ -69,3 +71,21 @@ CITY_STATE_MAP = {
     "João Pessoa": {"state": "PB", "server": "server_e"},
     "Campina Grande": {"state": "PB", "server": "server_e"}
 }
+
+CITYS_WEIGHT = [
+    ("Salvador", "Feira de Santana", {"weight": 100}),
+    ("Feira de Santana", "Aracaju", {"weight": 300}),
+    ("Aracaju", "Itabaiana", {"weight": 50}),
+    ("Itabaiana", "Maceió", {"weight": 200}),
+    ("Maceió", "Arapiraca", {"weight": 80}),
+    ("Maceió", "Recife", {"weight": 250}),
+    ("Recife", "Caruaru", {"weight": 120}),
+    ("Recife", "João Pessoa", {"weight": 110}),
+    ("João Pessoa", "Campina Grande", {"weight": 130})
+]
+
+CITYS_NODES = [
+        "Salvador", "Feira de Santana", "Aracaju", "Itabaiana",
+        "Maceió", "Arapiraca", "Recife", "Caruaru",
+        "João Pessoa", "Campina Grande"
+    ]
