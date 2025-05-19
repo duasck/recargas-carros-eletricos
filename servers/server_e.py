@@ -1,5 +1,5 @@
-from global_utils import constants
-from generics import create_server
+import global_utils.constants as constants
+from generics.generic_server import create_server
 
 # especific config for the server e
 server_config = {

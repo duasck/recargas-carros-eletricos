@@ -5,7 +5,7 @@ import requests
 import networkx as nx
 import logging
 import threading
-from global_utils import constants 
+import global_utils.constants as constants
 
 # for run, use "python3 -m generics.generic_server"
 
@@ -27,26 +27,13 @@ def create_server(server_config):
     
     # a graph for the router plan 
     G = nx.Graph()
-    G.add_nodes_from([
-        "Salvador", "Feira de Santana", "Aracaju", "Itabaiana",
-        "Maceió", "Arapiraca", "Recife", "Caruaru",
-        "João Pessoa", "Campina Grande"
-    ])
-    G.add_edges_from([
-        ("Salvador", "Feira de Santana", {"weight": 100}),
-        ("Feira de Santana", "Aracaju", {"weight": 300}),
-        ("Aracaju", "Itabaiana", {"weight": 50}),
-        ("Itabaiana", "Maceió", {"weight": 200}),
-        ("Maceió", "Arapiraca", {"weight": 80}),
-        ("Maceió", "Recife", {"weight": 250}),
-        ("Recife", "Caruaru", {"weight": 120}),
-        ("Recife", "João Pessoa", {"weight": 110}),
-        ("João Pessoa", "Campina Grande", {"weight": 130})
-    ])
+    G.add_nodes_from(constants.CITYS_NODES)
+    G.add_edges_from(constants.CITYS_WEIGHT)
 
+   
     # MQTT config
     mqtt_broker = "broker.hivemq.com"
-    mqtt_port = 1883
+    mqtt_port = constants.PORTA_MQTT
     mqtt_topic_battery = constants.TOPICO_BATERIA.format(server=f"server_{server_name}")
     mqtt_topic_request = constants.TOPICO_RESERVA.format(server=f"server_{server_name}")
 
@@ -130,7 +117,7 @@ def create_server(server_config):
         logger.info(f"{server_name.upper()} connected to MQTT broker with code {rc}")
         client.subscribe(mqtt_topic_battery)
         client.subscribe(mqtt_topic_request)
-        client.subscribe(constants.TOPICO_ROUTE_REQUEST.format(server=f"{server_name}"))
+        client.subscribe(constants.TOPICO_ROUTE_REQUEST.format(server=f"server_{server_name}"))
 
     def on_message(client, userdata, msg):
         try:
