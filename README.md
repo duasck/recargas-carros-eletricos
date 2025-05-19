@@ -11,6 +11,7 @@ Este projeto simula um sistema distribuído de recarga de carros elétricos, com
 - [Execução com Docker Compose](#execução-com-docker-compose)
 - [Execução Distribuída (2 computadores)](#execução-distribuída-2-computadores)
 - [Gerando arquivos docker-compose automaticamente](#gerando-arquivos-docker-compose-automaticamente)
+- [Como encontrar o IP do container Docker dos servidores](#como-encontrar-o-ip-do-container-docker-dos-servidores)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Observações](#observações)
 
@@ -130,6 +131,31 @@ Exemplo:
 python generate_compose.py 10
 ```
 Gera 10 carros no compose dos carros.
+
+---
+
+## Como encontrar o IP do container Docker dos servidores
+
+Se você precisa que os carros (em outro computador ou rede) se conectem ao broker MQTT rodando em um container Docker dos servidores, siga os passos abaixo para descobrir o IP do container:
+
+1. **Liste os containers em execução:**
+   ```sh
+   docker ps
+   ```
+   Anote o `CONTAINER ID` do servidor desejado.
+
+2. **Descubra o IP do container:**
+   ```sh
+   docker inspect -f "{{ .NetworkSettings.IPAddress }}" <CONTAINER_ID>
+   ```
+   Substitua `<CONTAINER_ID>` pelo ID anotado no passo anterior.
+
+3. **Use esse IP como valor da variável de ambiente `MQTT_BROKER` nos carros:**
+   ```yaml
+   environment:
+     - MQTT_BROKER=<IP_ENCONTRADO>
+   ```
+
 
 ---
 
