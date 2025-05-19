@@ -1,0 +1,50 @@
+version: '3.8'
+services:
+  server_a:
+    build:
+      context: .
+    command: python servers/server_a.py
+    container_name: server_a
+    ports:
+    - 5000:5000
+    networks:
+    - carros_net
+  server_b:
+    build:
+      context: .
+    command: python servers/server_b.py
+    container_name: server_b
+    ports:
+    - 5001:5001
+    networks:
+    - carros_net
+  server_c:
+    build:
+      context: .
+    command: python servers/server_c.py
+    container_name: server_c
+    ports:
+    - 5002:5002
+    networks:
+    - carros_net
+  server_d:
+    build:
+      context: .
+    command: python servers/server_d.py
+    container_name: server_d
+    ports:
+    - 5003:5003
+    networks:
+    - carros_net
+  server_e:
+    build:
+      context: .
+    command: python servers/server_e.py
+    container_name: server_e
+    ports:
+    - 5004:5004
+    networks:
+    - carros_net
+networks:
+  carros_net:
+    driver: bridge

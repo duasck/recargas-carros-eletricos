@@ -1,0 +1,55 @@
+version: '3.8'
+services:
+  car_1:
+    build:
+      context: .
+    command: python -u car.py car_1 normal
+    environment:
+    - MQTT_BROKER=broker.hivemq.com
+    - VEHICLE_ID=car1
+    - DISCHARGE_RATE=normal
+    networks:
+    - carros_net
+  car_2:
+    build:
+      context: .
+    command: python -u car.py car_2 fast
+    environment:
+    - MQTT_BROKER=broker.hivemq.com
+    - VEHICLE_ID=car2
+    - DISCHARGE_RATE=fast
+    networks:
+    - carros_net
+  car_3:
+    build:
+      context: .
+    command: python -u car.py car_3 fast
+    environment:
+    - MQTT_BROKER=broker.hivemq.com
+    - VEHICLE_ID=car3
+    - DISCHARGE_RATE=fast
+    networks:
+    - carros_net
+  car_4:
+    build:
+      context: .
+    command: python -u car.py car_4 fast
+    environment:
+    - MQTT_BROKER=broker.hivemq.com
+    - VEHICLE_ID=car4
+    - DISCHARGE_RATE=fast
+    networks:
+    - carros_net
+  car_5:
+    build:
+      context: .
+    command: python -u car.py car_5 slow
+    environment:
+    - MQTT_BROKER=broker.hivemq.com
+    - VEHICLE_ID=car5
+    - DISCHARGE_RATE=slow
+    networks:
+    - carros_net
+networks:
+  carros_net:
+    driver: bridge

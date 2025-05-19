@@ -14,10 +14,10 @@ TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
 TOPICO_ROUTE_REQUEST = "charging/{server}/route_request"
 
 # Configurações de tempo
-RESERVATION_TIMEOUT = 300  # 5 minutos em segundos
+RESERVATION_TIMEOUT = 60  # 1 minutos em segundos
 MQTT_QOS = 1  # Qualidade de serviço para MQTT
-WAITING_TIMEOUT = 600  # 10 minutos para esperar resposta do servidor
-TRAVEL_SPEED = 1.0  # Segundos por unidade de peso (1 km = 1 segundo)
+WAITING_TIMEOUT = 60  # 1 minutos para esperar resposta do servidor
+TRAVEL_SPEED = 0.1  # Segundos por unidade de peso (1 km = 1 segundo)
 
 # Consumo de bateria por km (ajustado pela taxa de descarga)
 BATTERY_CONSUMPTION = {

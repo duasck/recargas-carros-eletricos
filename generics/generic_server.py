@@ -5,7 +5,7 @@ import requests
 import networkx as nx
 import logging
 import threading
-from global_utils import constants 
+import global_utils.constants as constants
 
 # for run, use "python3 -m generics.generic_server"
 
@@ -117,7 +117,7 @@ def create_server(server_config):
         logger.info(f"{server_name.upper()} connected to MQTT broker with code {rc}")
         client.subscribe(mqtt_topic_battery)
         client.subscribe(mqtt_topic_request)
-        client.subscribe(constants.TOPICO_ROUTE_REQUEST.format(server=f"{server_name}"))
+        client.subscribe(constants.TOPICO_ROUTE_REQUEST.format(server=f"server_{server_name}"))
 
     def on_message(client, userdata, msg):
         try:
