@@ -19,3 +19,5 @@ USER mosquitto
 
 # Comando para iniciar o Mosquitto com o arquivo de configuração
 CMD ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
+## para rodar o mosquitto:
+#docker build -f Dockerfile.mosquitto -t mosquitto-custom .
