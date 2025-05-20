@@ -18,7 +18,7 @@ TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
 CITY_STATE_MAP = constants.CITY_STATE_MAP
 
 # MQTT broker configuration
-MQTT_BROKER = os.getenv("MQTT_BROKER", "broker.hivemq.com")
+MQTT_BROKER = os.getenv("MQTT_BROKER", "172.16.201.11")
 MQTT_PORT = int(os.getenv("MQTT_PORT", constants.PORTA_MQTT))
 
 # Logging configuration

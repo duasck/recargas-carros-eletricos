@@ -6,7 +6,7 @@ services:
     command: python servers/server_a.py
     container_name: server_a
     ports:
-    - 5000:5000
+    - 45000:45000
     networks:
     - carros_net
   server_b:
@@ -15,7 +15,7 @@ services:
     command: python servers/server_b.py
     container_name: server_b
     ports:
-    - 5001:5001
+    - 45001:45001
     networks:
     - carros_net
   server_c:
@@ -24,7 +24,7 @@ services:
     command: python servers/server_c.py
     container_name: server_c
     ports:
-    - 5002:5002
+    - 45002:45002
     networks:
     - carros_net
   server_d:
@@ -33,7 +33,7 @@ services:
     command: python servers/server_d.py
     container_name: server_d
     ports:
-    - 5003:5003
+    - 45003:45003
     networks:
     - carros_net
   server_e:
@@ -42,7 +42,7 @@ services:
     command: python servers/server_e.py
     container_name: server_e
     ports:
-    - 5004:5004
+    - 45004:45004
     networks:
     - carros_net
 networks:
