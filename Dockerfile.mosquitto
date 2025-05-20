@@ -22,4 +22,4 @@ CMD ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
 # CRIAR: 
 # docker build -f Dockerfile.mosquitto -t mosquitto-custom .
 # RODAR: 
-# docker run -d -p 18833:18833 -v $(pwd)/mosquitto/data:/mosquitto/data -v $(pwd)/mosquitto/log:/mosquitto/log --name mosquitto-custom mosquitto-custom
+# docker run -p 18833:18833 -v $(pwd)/mosquitto/data:/mosquitto/data -v $(pwd)/mosquitto/log:/mosquitto/log --name mosquitto-custom mosquitto-custom
