@@ -5,6 +5,11 @@ SERVIDOR_C = PORT_BASE + 2
 SERVIDOR_D = PORT_BASE + 3
 SERVIDOR_E = PORT_BASE + 4
 
+server_a_ip = "server_a"
+server_b_ip = "server_b"
+server_c_ip = "server_c"
+server_d_ip = "server_d"
+server_e_ip = "server_e"
 
 PORTA_MQTT = 1883
 # Tópicos MQTT
@@ -29,23 +34,23 @@ BATTERY_CONSUMPTION = {
 # Servidores disponíveis
 SERVERS = {
     "company_a": {
-        "url": f"http://server_a:{SERVIDOR_A}",
+        "url": f"http://{server_a_ip}:{SERVIDOR_A}",
         "cities": ["Salvador", "Feira de Santana"]
     },
     "company_b": {
-        "url": f"http://server_b:{SERVIDOR_B}",
+        "url": f"http://{server_b_ip}:{SERVIDOR_B}",
         "cities": ["Aracaju", "Itabaiana"]
     },
     "company_c": {
-        "url": f"http://server_c:{SERVIDOR_C}",
+        "url": f"http://{server_c_ip}:{SERVIDOR_C}",
         "cities": ["Maceió", "Arapiraca"]
     },
     "company_d": {
-        "url": f"http://server_d:{SERVIDOR_D}",
+        "url": f"http://{server_d_ip}:{SERVIDOR_D}",
         "cities": ["Recife", "Caruaru"]
     },
     "company_e": {
-        "url": f"http://server_e:{SERVIDOR_E}",
+        "url": f"http://{server_e_ip}:{SERVIDOR_E}",
         "cities": ["João Pessoa", "Campina Grande"]
     }
 }

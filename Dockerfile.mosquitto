@@ -1,0 +1,21 @@
+FROM alpine:latest
+
+# Instala o Mosquitto
+RUN apk add --no-cache mosquitto
+
+# Define o diretório de trabalho
+WORKDIR /mosquitto
+
+# Copia o arquivo de configuração e os diretórios
+COPY config/mosquitto.conf ./config/
+COPY data/ ./data/
+COPY log/ ./log/
+
+# Expõe as portas (18833 conforme configurado no mosquitto.conf)
+EXPOSE 18833
+
+# Define o usuário Mosquitto
+USER mosquitto
+
+# Comando para iniciar o Mosquitto com o arquivo de configuração
+CMD ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
