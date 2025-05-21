@@ -17,6 +17,7 @@ TOPICO_BATERIA = "vehicle/{server}/battery"
 TOPICO_RESERVA = "charging/{server}/request"
 TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
 TOPICO_ROUTE_REQUEST = "charging/{server}/route_request"
+mqtt_broker_ip = "172.16.201"
 
 # Configurações de tempo
 RESERVATION_TIMEOUT = 60  # 1 minutos em segundos

@@ -32,7 +32,7 @@ def create_server(server_config):
 
    
     # MQTT config
-    mqtt_broker = "172.16.201.11"
+    mqtt_broker = constants.mqtt_broker_ip # << insira aqui o ip do computador do mqtt 
     mqtt_port = constants.PORTA_MQTT
     mqtt_topic_battery = constants.TOPICO_BATERIA.format(server=f"server_{server_name}")
     mqtt_topic_request = constants.TOPICO_RESERVA.format(server=f"server_{server_name}")

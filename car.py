@@ -18,7 +18,7 @@ TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
 CITY_STATE_MAP = constants.CITY_STATE_MAP
 
 # MQTT broker configuration
-mqtt_ip = "172.16.201.11" # ip da máquina onde o mosquitto está rodando
+mqtt_ip = constants.mqtt_broker_ip # ip da máquina onde o mosquitto está rodando
 MQTT_BROKER = os.getenv("MQTT_BROKER", mqtt_ip)
 MQTT_PORT = int(os.getenv("MQTT_PORT", constants.PORTA_MQTT))
 
