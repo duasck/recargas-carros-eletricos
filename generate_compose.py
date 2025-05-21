@@ -56,7 +56,8 @@ if __name__ == "__main__":
     servers_port = CONST.servers_port
 
     num_cars = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_NUM_CARS
-    mqtt_broker = os.getenv("MQTT_BROKER", "172.16.201.11")
+    mqtt_ip = CONST.mqtt_broker_ip
+    mqtt_broker = os.getenv("MQTT_BROKER", mqtt_ip)
 
     servers_compose = generate_servers_compose(servers_port)
     cars_compose = generate_cars_compose(num_cars, mqtt_broker)

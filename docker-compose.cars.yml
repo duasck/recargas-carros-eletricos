@@ -13,11 +13,11 @@ services:
   car_2:
     build:
       context: .
-    command: python -u car.py car_2 normal
+    command: python -u car.py car_2 fast
     environment:
     - MQTT_BROKER=172.16.201.11
     - VEHICLE_ID=car2
-    - DISCHARGE_RATE=normal
+    - DISCHARGE_RATE=fast
     networks:
     - carros_net
   car_3:

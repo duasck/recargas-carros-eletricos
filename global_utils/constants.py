@@ -13,7 +13,7 @@ server_e_ip = "172.16.201.12"
 server_d_ip = "172.16.201.12"
 
 mqtt_broker_ip = "172.16.201.10"
-PORTA_MQTT = 1883
+PORTA_MQTT = 18833
 # Tópicos MQTT
 TOPICO_BATERIA = "vehicle/{server}/battery"
 TOPICO_RESERVA = "charging/{server}/request"
