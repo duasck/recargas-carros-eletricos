@@ -5,19 +5,20 @@ SERVIDOR_C = PORT_BASE + 2
 SERVIDOR_D = PORT_BASE + 3
 SERVIDOR_E = PORT_BASE + 4
 
-server_a_ip = "server_a"
-server_b_ip = "server_b"
-server_c_ip = "server_c"
-server_d_ip = "server_d"
-server_e_ip = "server_e"
+# IP base dos pcs: 172.16.201.
+server_a_ip = "172.16.201.10"
+server_b_ip = "172.16.201.10"
+server_c_ip = "172.16.201.10"
+server_e_ip = "172.16.201.12"
+server_d_ip = "172.16.201.12"
 
+mqtt_broker_ip = "172.16.201.10"
 PORTA_MQTT = 1883
 # Tópicos MQTT
 TOPICO_BATERIA = "vehicle/{server}/battery"
 TOPICO_RESERVA = "charging/{server}/request"
 TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
 TOPICO_ROUTE_REQUEST = "charging/{server}/route_request"
-mqtt_broker_ip = "172.16.201"
 
 # Configurações de tempo
 RESERVATION_TIMEOUT = 60  # 1 minutos em segundos
