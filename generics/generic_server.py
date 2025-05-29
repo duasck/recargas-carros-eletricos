@@ -6,8 +6,14 @@ import networkx as nx
 import logging
 import threading
 import global_utils.constants as constants
+import os
 
 # for run, use "python3 -m generics.generic_server"
+
+try:
+    from blockchain.ledger import registrar_transacao
+except ImportError:
+    registrar_transacao = None  # Blockchain não disponível
 
 def create_server(server_config):
     # server's configs
@@ -95,6 +101,12 @@ def create_server(server_config):
                         logger.info(f"Queue status for {point['id']} ({point['location']}): {point['queue']}")
                         break
 
+        if registrar_transacao:
+            try:
+                registrar_transacao('recarga', {'vehicle_id': vehicle_id, 'action': action, 'point_id': point_id, 'status': 'FIM'})
+            except Exception as e:
+                logger.warning(f'Erro ao registrar fim de recarga no blockchain: {e}')
+
     def handle_route_request(data):
         vehicle_id = data['vehicle_id']
         city_start = data['start']
@@ -163,6 +175,11 @@ def create_server(server_config):
                     if point["reserved"] < point["capacity"]:
                         point["reserved"] += 1
                         logger.info(f"Server {server_name.upper()}: Prepared reservation for {vehicle_id} at {point_id}")
+                        if registrar_transacao:
+                            try:
+                                registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'PREPARE'})
+                            except Exception as e:
+                                logger.warning(f'Erro ao registrar no blockchain: {e}')
                         return jsonify({
                             "status": "READY",
                             "position": 0
@@ -190,6 +207,11 @@ def create_server(server_config):
                         point['queue'].remove(vehicle_id)
                         point['reserved'] += 1
                     logger.info(f'{server_name.upper()}: Commited reservation for {vehicle_id} in {point_id}')
+                    if registrar_transacao:
+                        try:
+                            registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'COMMIT'})
+                        except Exception as e:
+                            logger.warning(f'Erro ao registrar no blockchain: {e}')
                     return jsonify({'status': 'COMMITED'})
             return jsonify({'status': 'ABORTED'})
                     
@@ -221,6 +243,11 @@ def create_server(server_config):
                                 qos=constants.MQTT_QOS
                             )
                             logger.info(f"Server {server_name.upper()}: Notified next vehicle {next_vehicle} for point {point_id}")
+                    if registrar_transacao:
+                        try:
+                            registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'ABORT'})
+                        except Exception as e:
+                            logger.warning(f'Erro ao registrar no blockchain: {e}')
                     return jsonify({"status": "ABORTED"})
             return jsonify({"status": "ABORTED"})
 

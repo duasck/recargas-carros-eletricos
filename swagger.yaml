@@ -1,0 +1,316 @@
+openapi: 3.0.3
+info:
+  title: Distributed Electric Vehicle Charging API
+  description: API for managing charging points and route planning for electric vehicles across multiple companies.
+  version: 1.0.0
+servers:
+  - url: http://{server_ip}:{port}/api
+    variables:
+      server_ip:
+        default: 172.16.201.10
+        description: IP address of the server (varies by company)
+      port:
+        default: 45000
+        description: Port of the server (45000 for server_a, 45001 for server_b, etc.)
+paths:
+  /charging_points:
+    get:
+      summary: List all charging points managed by the server
+      operationId: listChargingPoints
+      responses:
+        '200':
+          description: List of charging points
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ChargingPoint'
+  /prepare:
+    post:
+      summary: Prepare a reservation for a charging point
+      operationId: prepareReservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                point_id:
+                  type: string
+                  description: ID of the charging point
+                vehicle_id:
+                  type: string
+                  description: ID of the vehicle requesting the reservation
+              required: [point_id, vehicle_id]
+      responses:
+        '200':
+          description: Reservation prepared or queued
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PrepareResponseReady'
+                  - $ref: '#/components/schemas/PrepareResponseQueued'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /commit:
+    post:
+      summary: Commit a prepared reservation
+      operationId: commitReservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                point_id:
+                  type: string
+                  description: ID of the charging point
+                vehicle_id:
+                  type: string
+                  description: ID of the vehicle
+              required: [point_id, vehicle_id]
+      responses:
+        '200':
+          description: Reservation committed or aborted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommitResponse'
+  /abort:
+    post:
+      summary: Abort a prepared reservation
+      operationId: abortReservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                point_id:
+                  type: string
+                  description: ID of the charging point
+                vehicle_id:
+                  type: string
+                  description: ID of the vehicle
+              required: [point_id, vehicle_id]
+      responses:
+        '200':
+          description: Reservation aborted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbortResponse'
+  /queue_status/{point_id}:
+    get:
+      summary: Get queue status for a specific charging point
+      operationId: getQueueStatus
+      parameters:
+        - name: point_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the charging point
+      responses:
+        '200':
+          description: Queue status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueStatus'
+        '404':
+          description: Charging point not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /charging_status:
+    get:
+      summary: Get charging status for all points managed by the server
+      operationId: getChargingStatus
+      responses:
+        '200':
+          description: Status of all charging points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChargingStatus'
+  /plan_route:
+    post:
+      summary: Plan a route with charging points for a vehicle
+      operationId: planRoute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start:
+                  type: string
+                  description: Starting city
+                end:
+                  type: string
+                  description: Destination city
+                vehicle_id:
+                  type: string
+                  description: ID of the vehicle
+              required: [start, end, vehicle_id]
+      responses:
+        '200':
+          description: Planned route with reservations
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/RouteResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ChargingPoint:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the charging point
+        location:
+          type: string
+          description: City where the point is located
+        capacity:
+          type: integer
+          description: Maximum number of vehicles that can charge simultaneously
+        reserved:
+          type: integer
+          description: Number of currently reserved slots
+        queue:
+          type: array
+          items:
+            type: string
+          description: List of vehicle IDs in the queue
+      required: [id, location, capacity, reserved, queue]
+    PrepareResponseReady:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [READY]
+        position:
+          type: integer
+          description: Position in queue (0 for immediate reservation)
+      required: [status, position]
+    PrepareResponseQueued:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [QUEUED]
+        position:
+          type: integer
+          description: Position in the queue
+        estimated_time:
+          type: integer
+          description: Estimated wait time in seconds
+      required: [status, position, estimated_time]
+    CommitResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [COMMITTED, ABORTED]
+      required: [status]
+    AbortResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ABORTED]
+      required: [status]
+    QueueStatus:
+      type: object
+      properties:
+        reserved:
+          type: integer
+          description: Number of reserved slots
+        queue_size:
+          type: integer
+          description: Number of vehicles in the queue
+        queue:
+          type: array
+          items:
+            type: string
+          description: List of vehicle IDs in the queue
+      required: [reserved, queue_size, queue]
+    ChargingStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the charging point
+        location:
+          type: string
+          description: City where the point is located
+        reserved:
+          type: integer
+          description: Number of reserved slots
+        queue_size:
+          type: integer
+          description: Number of vehicles in the queue
+        queue:
+          type: array
+          items:
+            type: string
+          description: List of vehicle IDs in the queue
+      required: [id, location, reserved, queue_size, queue]
+    RouteResponse:
+      type: object
+      properties:
+        path:
+          type: array
+          items:
+            type: string
+          description: List of cities in the planned route
+        reservations:
+          type: array
+          items:
+            type: object
+            properties:
+              company:
+                type: string
+                description: Company managing the charging point
+              point_id:
+                type: string
+                description: ID of the charging point
+              city:
+                type: string
+                description: City of the charging point
+              position:
+                type: integer
+                description: Queue position (0 if immediately reserved)
+            required: [company, point_id, city, position]
+      required: [path, reservations]
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required: [error]

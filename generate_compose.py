@@ -18,6 +18,31 @@ def generate_servers_compose(servers_port):
             "ports": [f"{port}:{port}"],
             "networks": ["carros_net"]
         }
+    # Adiciona o serviço do nó Ethereum (geth) para blockchain
+    services["geth"] = {
+        "image": "ethereum/client-go",
+        "container_name": "geth",
+        "ports": [
+            "8545:8545",
+            "30303:30303"
+        ],
+        "command": "--dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal --http.corsdomain=* --http.vhosts=*",
+        "networks": ["carros_net"]
+    }
+    services["mosquitto"] = {
+        "image": "eclipse-mosquitto",
+        "container_name": "mosquitto",
+        "ports": [
+            "18833:18833",
+            "9001:9001"
+        ],
+        "volumes": [
+            "./mosquitto/config:/mosquitto/config",
+            "./mosquitto/data:/mosquitto/data",
+            "./mosquitto/log:/mosquitto/log"
+        ],
+        "networks": ["carros_net"]
+    }
     compose = {
         "version": "3.8",
         "services": services,

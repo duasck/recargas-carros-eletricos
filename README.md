@@ -120,3 +120,24 @@ Esta abordagem permite distribuir os servidores de carregamento em diferentes m�
 * `charging/{server}/request`: Usado por veículos para solicitar uma reserva em um ponto específico de um servidor (embora a reserva principal seja via 2PC no planejamento de rota) ou, mais importante, para indicar que o carregamento foi concluído (`action: "done"`).
 * `charging/{vehicle_id}/response`: Tópico dedicado para cada veículo, onde os servidores enviam respostas diretas (confirmações de reserva de rota, status de "pronto para carregar" quando sai da fila, erros).
 * `charging/{server}/route_request`: Usado por veículos para enviar solicitações de planejamento de rota para um servidor específico (geralmente o servidor da cidade de partida).
+
+## Integração Blockchain
+
+O sistema agora registra todas as transações de reserva, recarga e (futuramente) pagamento em um ledger distribuído baseado em Ethereum, garantindo transparência e imutabilidade.
+
+### Como funciona
+- Cada reserva, início/fim de recarga é registrada automaticamente no blockchain.
+- O serviço blockchain roda como um nó Ethereum (geth) no Docker Compose.
+- O módulo `blockchain/ledger.py` faz a integração via web3.py.
+
+### Como rodar
+- O serviço `geth` já está incluído no `docker-compose.servers.yml`.
+- Certifique-se de que o serviço está rodando antes de iniciar os servidores.
+- As transações são registradas automaticamente; consulte os logs do geth para auditoria.
+
+### Dependências
+- web3 (adicionada ao requirements.txt)
+- Ethereum client (geth) via Docker
+
+### Observação
+- O registro de pagamentos pode ser integrado de forma semelhante, bastando chamar `registrar_transacao('pagamento', dados)` no ponto do código responsável pelo pagamento.
