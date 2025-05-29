@@ -61,6 +61,33 @@ if __name__ == "__main__":
     servers_compose = generate_servers_compose(servers_port)
     cars_compose = generate_cars_compose(num_cars, mqtt_broker)
 
+    # Adiciona o serviço do nó Ethereum (geth) para blockchain
+    servers_compose["services"]["geth"] = {
+        "image": "ethereum/client-go",
+        "container_name": "geth",
+        "ports": [
+            "8545:8545",
+            "30303:30303"
+        ],
+        "command": "--dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal --http.corsdomain=* --http.vhosts=*",
+        "networks": ["carros_net"]
+    }
+    # Adiciona o serviço Mosquitto (broker MQTT)
+    servers_compose["services"]["mosquitto"] = {
+        "image": "eclipse-mosquitto",
+        "container_name": "mosquitto",
+        "ports": [
+            "18833:18833",
+            "9001:9001"
+        ],
+        "volumes": [
+            "./mosquitto/config:/mosquitto/config",
+            "./mosquitto/data:/mosquitto/data",
+            "./mosquitto/log:/mosquitto/log"
+        ],
+        "networks": ["carros_net"]
+    }
+
     with open("docker-compose.servers.yml", "w") as f:
         yaml.dump(servers_compose, f, sort_keys=False)
     with open("docker-compose.cars.yml", "w") as f:

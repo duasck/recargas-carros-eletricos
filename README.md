@@ -14,6 +14,7 @@ Este projeto simula um sistema distribuído de recarga de carros elétricos, com
 - [Como encontrar o IP do container Docker dos servidores](#como-encontrar-o-ip-do-container-docker-dos-servidores)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Observações](#observações)
+- [Integração Blockchain](#integração-blockchain)
 
 ---
 
@@ -182,6 +183,29 @@ servers/server_e.py         # Servidor E (Paraíba)
 - Por padrão, utiliza o broker público `broker.hivemq.com`. Para usar outro broker, altere a variável de ambiente `MQTT_BROKER`.
 - Para rodar múltiplos carros, basta aumentar o número no compose ou rodar múltiplas instâncias de `car.py`.
 - Os logs dos servidores e carros mostram o fluxo de planejamento de rotas, reservas e recargas.
+
+---
+
+## Integração Blockchain
+
+O sistema agora registra todas as transações de reserva, recarga e (futuramente) pagamento em um ledger distribuído baseado em Ethereum, garantindo transparência e imutabilidade.
+
+### Como funciona
+- Cada reserva, início/fim de recarga é registrada automaticamente no blockchain.
+- O serviço blockchain roda como um nó Ethereum (geth) no Docker Compose.
+- O módulo `blockchain/ledger.py` faz a integração via web3.py.
+
+### Como rodar
+- O serviço `geth` já está incluído no `docker-compose.servers.yml`.
+- Certifique-se de que o serviço está rodando antes de iniciar os servidores.
+- As transações são registradas automaticamente; consulte os logs do geth para auditoria.
+
+### Dependências
+- web3 (adicionada ao requirements.txt)
+- Ethereum client (geth) via Docker
+
+### Observação
+- O registro de pagamentos pode ser integrado de forma semelhante, bastando chamar `registrar_transacao('pagamento', dados)` no ponto do código responsável pelo pagamento.
 
 ---
 

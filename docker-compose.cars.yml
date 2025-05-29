@@ -13,21 +13,21 @@ services:
   car_2:
     build:
       context: .
-    command: python -u car.py car_2 fast
+    command: python -u car.py car_2 slow
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car2
-    - DISCHARGE_RATE=fast
+    - DISCHARGE_RATE=slow
     networks:
     - carros_net
   car_3:
     build:
       context: .
-    command: python -u car.py car_3 fast
+    command: python -u car.py car_3 slow
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car3
-    - DISCHARGE_RATE=fast
+    - DISCHARGE_RATE=slow
     networks:
     - carros_net
   car_4:
@@ -43,11 +43,11 @@ services:
   car_5:
     build:
       context: .
-    command: python -u car.py car_5 slow
+    command: python -u car.py car_5 fast
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car5
-    - DISCHARGE_RATE=slow
+    - DISCHARGE_RATE=fast
     networks:
     - carros_net
 networks:
