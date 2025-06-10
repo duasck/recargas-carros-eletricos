@@ -5,3 +5,5 @@ networkx==3.4.2
 paho-mqtt==2.1.0
 requests==2.32.3
 web3
+py-solc-x
+ecdsa

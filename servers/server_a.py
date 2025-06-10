@@ -1,11 +1,11 @@
 import global_utils.constants as constants
 from generics.generic_server import create_server
 
-# especific config for the server a 
 server_config = {
     "company": "company_a",
     "name": "a",
     "port": constants.SERVIDOR_A,
+    "account": constants.COMPANY_ACCOUNTS["company_a"],
     "charging_points": [
         {
             "id": "BA1",
@@ -24,7 +24,6 @@ server_config = {
     ]
 }
 
-# create and execute the server
 app, port = create_server(server_config)
 
 if __name__ == "__main__":

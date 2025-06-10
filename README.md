@@ -1,30 +1,26 @@
 # Recargas Carros Elétricos
 
-Este projeto simula um sistema distribuído de recarga de carros elétricos, com múltiplos servidores e clientes (carros), utilizando Flask, MQTT e Docker.
-
----
+Este projeto simula um sistema distribuído de recarga de carros elétricos, com múltiplos servidores e clientes (carros), utilizando Flask, MQTT, Docker e blockchain Ethereum.
 
 ## Sumário
 
 - [Pré-requisitos](#pré-requisitos)
 - [Instalação Local](#instalação-local)
 - [Execução com Docker Compose](#execução-com-docker-compose)
-- [Execução Distribuída (2 computadores)](#execução-distribuída-2-computadores)
-- [Gerando arquivos docker-compose automaticamente](#gerando-arquivos-docker-compose-automaticamente)
-- [Como encontrar o IP do container Docker dos servidores](#como-encontrar-o-ip-do-container-docker-dos-servidores)
+- [Execução Distribuída](#execução-distribuída-2-computadores)
+- [Gerando arquivos docker-compose](#gerando-arquivos-docker-compose-automaticamente)
+- [Como encontrar o IP do container](#como-encontrar-o-ip-do-container-docker-dos-servidores)
 - [Estrutura do Projeto](#estrutura-do-projeto)
-- [Observações](#observações)
 - [Integração Blockchain](#integração-blockchain)
-
----
+- [Pagamentos e Contabilidade](#pagamentos-e-contabilidade)
+- [Visualização de Transações](#visualização-de-transações)
 
 ## Pré-requisitos
 
-- Python 3.9+ instalado
-- [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/) instalados (opcional, mas recomendado)
-- Broker MQTT acessível (por padrão, usa `broker.hivemq.com`)
-
----
+- Python 3.9+
+- [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/)
+- Broker MQTT acessível (`broker.hivemq.com` por padrão)
+- Node.js (para compilar contratos Solidity)
 
 ## Instalação Local
 
@@ -34,7 +30,7 @@ Este projeto simula um sistema distribuído de recarga de carros elétricos, com
    cd recargas-carros-eletricos
    ```
 
-2. **Crie um ambiente virtual (opcional, mas recomendado):**
+2. **Crie um ambiente virtual:**
    ```sh
    python -m venv venv
    source venv/bin/activate  # Linux/macOS
@@ -46,70 +42,51 @@ Este projeto simula um sistema distribuído de recarga de carros elétricos, com
    pip install -r requirements.txt
    ```
 
-4. **Execute um servidor (exemplo para o server_a):**
+4. **Execute um servidor (exemplo: server_a):**
    ```sh
    python servers/server_a.py
    ```
 
 5. **Execute um carro:**
    ```sh
-   python car.py
+   MQTT_BROKER=broker.hivemq.com VEHICLE_ID=car1 VEHICLE_PRIVATE_KEY=0xYourPrivateKey python car.py
    ```
-   Você pode passar variáveis de ambiente para customizar:
-   ```sh
-   MQTT_BROKER=broker.hivemq.com VEHICLE_ID=car1 python car.py
-   ```
-
----
 
 ## Execução com Docker Compose
 
-### 1. Gerando os arquivos de compose
+1. **Gere os arquivos de compose:**
+   ```sh
+   python generate_compose.py 5
+   ```
+   Gera `docker-compose.servers.yml` e `docker-compose.cars.yml` (5 carros).
 
-Você pode gerar os arquivos de compose automaticamente:
+2. **Suba os servidores:**
+   ```sh
+   docker compose -f docker-compose.servers.yml up --build
+   ```
 
-```sh
-python generate_compose.py 5
-```
-Isso irá criar:
-- `docker-compose.servers.yml` (para os servidores)
-- `docker-compose.cars.yml` (para os carros, com 5 instâncias por padrão)
-
-### 2. Subindo os servidores
-
-```sh
-docker compose -f docker-compose.servers.yml up --build
-```
-
-### 3. Subindo os carros
-
-```sh
-docker compose -f docker-compose.cars.yml up --build
-```
-
-Você pode editar o número de carros no arquivo ou gerar novamente com outro número.
-
----
+3. **Suba os carros:**
+   ```sh
+   docker compose -f docker-compose.cars.yml up --build
+   ```
 
 ## Execução Distribuída (2 computadores)
 
 ### Computador 1: Servidores
-
 1. Gere e suba os servidores:
    ```sh
    python generate_compose.py
    docker compose -f docker-compose.servers.yml up --build
    ```
-2. Descubra o IP deste computador (ex: `192.168.1.10`).
+2. Descubra o IP (ex: `192.168.1.10`).
 
 ### Computador 2: Carros
-
-1. Copie o projeto para este computador.
+1. Copie o projeto.
 2. Gere o compose dos carros:
    ```sh
    python generate_compose.py 3
    ```
-3. Edite o arquivo `docker-compose.cars.yml` e altere a variável de ambiente `MQTT_BROKER` para o IP do computador dos servidores ou para o broker MQTT desejado:
+3. Edite `docker-compose.cars.yml` para usar o IP do servidor:
    ```yaml
    environment:
      - MQTT_BROKER=192.168.1.10
@@ -119,94 +96,73 @@ Você pode editar o número de carros no arquivo ou gerar novamente com outro n�
    docker compose -f docker-compose.cars.yml up --build
    ```
 
-**Obs:** Todos os containers precisam acessar o mesmo broker MQTT.
-
----
-
 ## Gerando arquivos docker-compose automaticamente
 
-O script [`generate_compose.py`](generate_compose.py) gera os arquivos de compose conforme a configuração dos servidores e o número de carros desejado.
-
-Exemplo:
 ```sh
 python generate_compose.py 10
 ```
-Gera 10 carros no compose dos carros.
-
----
 
 ## Como encontrar o IP do container Docker dos servidores
 
-Se você precisa que os carros (em outro computador ou rede) se conectem ao broker MQTT rodando em um container Docker dos servidores, siga os passos abaixo para descobrir o IP do container:
-
-1. **Liste os containers em execução:**
+1. Liste os containers:
    ```sh
    docker ps
    ```
-   Anote o `CONTAINER ID` do servidor desejado.
-
-2. **Descubra o IP do container:**
+2. Descubra o IP:
    ```sh
    docker inspect -f "{{ .NetworkSettings.IPAddress }}" <CONTAINER_ID>
    ```
-   Substitua `<CONTAINER_ID>` pelo ID anotado no passo anterior.
-
-3. **Use esse IP como valor da variável de ambiente `MQTT_BROKER` nos carros:**
-   ```yaml
-   environment:
-     - MQTT_BROKER=<IP_ENCONTRADO>
-   ```
-
-
----
 
 ## Estrutura do Projeto
 
 ```
-car.py                      # Simulador de carro elétrico (cliente)
+car.py                      # Simulador de carro elétrico
 generate_compose.py         # Gera arquivos docker-compose
 requirements.txt            # Dependências Python
-global_utils/constants.py   # Constantes globais do sistema
+global_utils/constants.py   # Constantes globais
 generics/generic_server.py  # Lógica genérica dos servidores
 servers/server_a.py         # Servidor A (Bahia)
 servers/server_b.py         # Servidor B (Sergipe)
 servers/server_c.py         # Servidor C (Alagoas)
 servers/server_d.py         # Servidor D (Pernambuco)
 servers/server_e.py         # Servidor E (Paraíba)
+blockchain/contract.sol     # Contrato inteligente Ethereum
+blockchain/deploy_contract.py # Implanta o contrato
+api/transactions.py         # API para consultar transações
 ```
-
----
-
-## Observações
-
-- Os servidores e carros se comunicam via MQTT.
-- Por padrão, utiliza o broker público `broker.hivemq.com`. Para usar outro broker, altere a variável de ambiente `MQTT_BROKER`.
-- Para rodar múltiplos carros, basta aumentar o número no compose ou rodar múltiplas instâncias de `car.py`.
-- Os logs dos servidores e carros mostram o fluxo de planejamento de rotas, reservas e recargas.
-
----
 
 ## Integração Blockchain
 
-O sistema agora registra todas as transações de reserva, recarga e (futuramente) pagamento em um ledger distribuído baseado em Ethereum, garantindo transparência e imutabilidade.
+Registra reservas, recargas e pagamentos em um ledger Ethereum.
 
 ### Como funciona
-- Cada reserva, início/fim de recarga é registrada automaticamente no blockchain.
-- O serviço blockchain roda como um nó Ethereum (geth) no Docker Compose.
-- O módulo `blockchain/ledger.py` faz a integração via web3.py.
+- Usa um contrato inteligente (`contract.sol`) para gerenciar saldos e transações.
+- O módulo `ledger.py` interage com o contrato via `web3.py`.
+- O serviço `geth` roda no Docker Compose.
 
 ### Como rodar
-- O serviço `geth` já está incluído no `docker-compose.servers.yml`.
-- Certifique-se de que o serviço está rodando antes de iniciar os servidores.
-- As transações são registradas automaticamente; consulte os logs do geth para auditoria.
+- O serviço `contract_deploy` implanta o contrato automaticamente.
+- Verifique os logs do `geth` para auditoria.
 
-### Dependências
-- web3 (adicionada ao requirements.txt)
-- Ethereum client (geth) via Docker
+## Pagamentos e Contabilidade
 
-### Observação
-- O registro de pagamentos pode ser integrado de forma semelhante, bastando chamar `registrar_transacao('pagamento', dados)` no ponto do código responsável pelo pagamento.
+- **Pagamentos**: Após cada recarga, o veículo paga à empresa via `/api/payment` (1% de bateria = 1e15 wei).
+- **Contabilidade**: O contrato mantém saldos em wei para veículos e empresas, atualizados após cada pagamento.
 
----
+## Visualização de Transações
 
-Dúvidas? Consulte os comentários nos arquivos ou abra uma issue!
+Acesse `http://<server_ip>:5100/api/transactions` para ver o histórico de transações (reservas, recargas, pagamentos). Exemplo de resposta:
+```json
+[
+  {
+    "from": "0xAccount1",
+    "to": "0xAccount2",
+    "amount": 1500000000000000,
+    "type": "pagamento",
+    "data": "{\"vehicle_id\": \"car_1\", \"amount\": 1500000000000000, \"status\": \"COMPLETED\"}",
+    "timestamp": 1623456789
+  }
+]
+```
+
+Consulte saldos em `http://<server_ip>:5100/api/balance/<address>`.

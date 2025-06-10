@@ -16,8 +16,48 @@ def generate_servers_compose(servers_port):
             "command": f"python servers/server_{company}.py",
             "container_name": f"server_{company}",
             "ports": [f"{port}:{port}"],
-            "networks": ["carros_net"]
+            "networks": ["carros_net"],
+            "environment": [
+                f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS')}",
+                "PRIVATE_KEY=0xYourPrivateKey"  # Substituir por chave real
+            ]
         }
+    services["geth"] = {
+        "image": "ethereum/client-go",
+        "container_name": "geth",
+        "ports": ["8545:8545", "30303:30303"],
+        "command": "--dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal --http.corsdomain=* --http.vhosts=*",
+        "networks": ["carros_net"]
+    }
+    services["mosquitto"] = {
+        "image": "eclipse-mosquitto",
+        "container_name": "mosquitto",
+        "ports": ["18833:18833", "9001:9001"],
+        "volumes": [
+            "./mosquitto/config:/mosquitto/config",
+            "./mosquitto/data:/mosquitto/data",
+            "./mosquitto/log:/mosquitto/log"
+        ],
+        "networks": ["carros_net"]
+    }
+    services["contract_deploy"] = {
+        "build": {"context": "."},
+        "command": "python blockchain/deploy_contract.py",
+        "container_name": "contract_deploy",
+        "networks": ["carros_net"],
+        "depends_on": ["geth"]
+    }
+    services["transactions_api"] = {
+        "build": {"context": "."},
+        "command": "python api/transactions.py",
+        "container_name": "transactions_api",
+        "ports": ["5100:5100"],
+        "networks": ["carros_net"],
+        "environment": [
+            f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS')}"
+        ],
+        "depends_on": ["geth"]
+    }
     compose = {
         "version": "3.8",
         "services": services,
@@ -39,7 +79,9 @@ def generate_cars_compose(num_cars, mqtt_broker):
             "environment": [
                 f"MQTT_BROKER={mqtt_broker}",
                 f"VEHICLE_ID=car{i}",
-                f"DISCHARGE_RATE={discharge_rate}"
+                f"DISCHARGE_RATE={discharge_rate}",
+                f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS')}",
+                "VEHICLE_PRIVATE_KEY=0xVehiclePrivateKey"  # Substituir por chave real
             ],
             "networks": ["carros_net"]
         }
@@ -54,39 +96,11 @@ def generate_cars_compose(num_cars, mqtt_broker):
 
 if __name__ == "__main__":
     servers_port = CONST.servers_port
-
     num_cars = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_NUM_CARS
     mqtt_broker = os.getenv("MQTT_BROKER", "broker.hivemq.com")
 
     servers_compose = generate_servers_compose(servers_port)
     cars_compose = generate_cars_compose(num_cars, mqtt_broker)
-
-    # Adiciona o serviço do nó Ethereum (geth) para blockchain
-    servers_compose["services"]["geth"] = {
-        "image": "ethereum/client-go",
-        "container_name": "geth",
-        "ports": [
-            "8545:8545",
-            "30303:30303"
-        ],
-        "command": "--dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal --http.corsdomain=* --http.vhosts=*",
-        "networks": ["carros_net"]
-    }
-    # Adiciona o serviço Mosquitto (broker MQTT)
-    servers_compose["services"]["mosquitto"] = {
-        "image": "eclipse-mosquitto",
-        "container_name": "mosquitto",
-        "ports": [
-            "18833:18833",
-            "9001:9001"
-        ],
-        "volumes": [
-            "./mosquitto/config:/mosquitto/config",
-            "./mosquitto/data:/mosquitto/data",
-            "./mosquitto/log:/mosquitto/log"
-        ],
-        "networks": ["carros_net"]
-    }
 
     with open("docker-compose.servers.yml", "w") as f:
         yaml.dump(servers_compose, f, sort_keys=False)

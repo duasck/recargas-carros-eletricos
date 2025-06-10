@@ -5,48 +5,57 @@ SERVIDOR_C = PORT_BASE + 2
 SERVIDOR_D = PORT_BASE + 3
 SERVIDOR_E = PORT_BASE + 4
 
-
 PORTA_MQTT = 1883
-# Tópicos MQTT
 TOPICO_BATERIA = "vehicle/{server}/battery"
 TOPICO_RESERVA = "charging/{server}/request"
 TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
 TOPICO_ROUTE_REQUEST = "charging/{server}/route_request"
 
-# Configurações de tempo
-RESERVATION_TIMEOUT = 60  # 1 minutos em segundos
-MQTT_QOS = 1  # Qualidade de serviço para MQTT
-WAITING_TIMEOUT = 60  # 1 minutos para esperar resposta do servidor
-TRAVEL_SPEED = 0.1  # Segundos por unidade de peso (1 km = 1 segundo)
+RESERVATION_TIMEOUT = 60
+MQTT_QOS = 1
+WAITING_TIMEOUT = 60
+TRAVEL_SPEED = 0.1
 
-# Consumo de bateria por km (ajustado pela taxa de descarga)
 BATTERY_CONSUMPTION = {
-    "fast": 1,  # 10% por 100 km
-    "normal": 0.5,  # 5% por 100 km
-    "slow": 0.25  # 2.5% por 100 km
+    "fast": 1,
+    "normal": 0.5,
+    "slow": 0.25
 }
 
-# Servidores disponíveis
+# Contas Ethereum das empresas
+COMPANY_ACCOUNTS = {
+    "company_a": "0xAccount1",  # Substituir por endereço real
+    "company_b": "0xAccount2",
+    "company_c": "0xAccount3",
+    "company_d": "0xAccount4",
+    "company_e": "0xAccount5"
+}
+
 SERVERS = {
     "company_a": {
         "url": f"http://server_a:{SERVIDOR_A}",
-        "cities": ["Salvador", "Feira de Santana"]
+        "cities": ["Salvador", "Feira de Santana"],
+        "account": COMPANY_ACCOUNTS["company_a"]
     },
     "company_b": {
         "url": f"http://server_b:{SERVIDOR_B}",
-        "cities": ["Aracaju", "Itabaiana"]
+        "cities": ["Aracaju", "Itabaiana"],
+        "account": COMPANY_ACCOUNTS["company_b"]
     },
     "company_c": {
         "url": f"http://server_c:{SERVIDOR_C}",
-        "cities": ["Maceió", "Arapiraca"]
+        "cities": ["Maceió", "Arapiraca"],
+        "account": COMPANY_ACCOUNTS["company_c"]
     },
     "company_d": {
         "url": f"http://server_d:{SERVIDOR_D}",
-        "cities": ["Recife", "Caruaru"]
+        "cities": ["Recife", "Caruaru"],
+        "account": COMPANY_ACCOUNTS["company_d"]
     },
     "company_e": {
         "url": f"http://server_e:{SERVIDOR_E}",
-        "cities": ["João Pessoa", "Campina Grande"]
+        "cities": ["João Pessoa", "Campina Grande"],
+        "account": COMPANY_ACCOUNTS["company_e"]
     }
 }
 
@@ -58,7 +67,6 @@ servers_port = [
     {"name": "e", "port": SERVIDOR_E, "company": "company_e"}
 ]
 
-# Mapeamento de cidades para estados e servidores
 CITY_STATE_MAP = {
     "Salvador": {"state": "BA", "server": "server_a"},
     "Feira de Santana": {"state": "BA", "server": "server_a"},
@@ -85,7 +93,7 @@ CITYS_WEIGHT = [
 ]
 
 CITYS_NODES = [
-        "Salvador", "Feira de Santana", "Aracaju", "Itabaiana",
-        "Maceió", "Arapiraca", "Recife", "Caruaru",
-        "João Pessoa", "Campina Grande"
-    ]
+    "Salvador", "Feira de Santana", "Aracaju", "Itabaiana",
+    "Maceió", "Arapiraca", "Recife", "Caruaru",
+    "João Pessoa", "Campina Grande"
+]

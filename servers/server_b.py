@@ -6,6 +6,7 @@ server_config = {
     "company": "company_b",
     "name": "b",
     "port": constants.SERVIDOR_B,
+    "account": constants.COMPANY_ACCOUNTS["company_b"],
     "charging_points": [
         {
             "id": "SE1",
