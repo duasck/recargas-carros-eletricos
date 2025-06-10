@@ -103,7 +103,8 @@ def create_server(server_config):
 
         if registrar_transacao:
             try:
-                registrar_transacao('recarga', {'vehicle_id': vehicle_id, 'action': action, 'status': 'INICIO'})
+                tx_hash = registrar_transacao('recarga', {'vehicle_id': vehicle_id, 'action': action, 'status': 'INICIO'})
+                logger.info(f'Transação blockchain registrada: tipo=recarga, dados={{"vehicle_id": "{vehicle_id}", "action": "{action}", "status": "INICIO"}}, tx_hash={tx_hash}')
             except Exception as e:
                 logger.warning(f'Erro ao registrar recarga no blockchain: {e}')
 
@@ -177,7 +178,8 @@ def create_server(server_config):
                         logger.info(f"Server {server_name.upper()}: Prepared reservation for {vehicle_id} at {point_id}")
                         if registrar_transacao:
                             try:
-                                registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'PREPARE'})
+                                tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'PREPARE'})
+                                logger.info(f'Transação blockchain registrada: tipo=reserva, dados={{"point_id": "{point_id}", "vehicle_id": "{vehicle_id}", "status": "PREPARE"}}, tx_hash={tx_hash}')
                             except Exception as e:
                                 logger.warning(f'Erro ao registrar no blockchain: {e}')
                         return jsonify({
@@ -209,7 +211,8 @@ def create_server(server_config):
                     logger.info(f'{server_name.upper()}: Commited reservation for {vehicle_id} in {point_id}')
                     if registrar_transacao:
                         try:
-                            registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'COMMIT'})
+                            tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'COMMIT'})
+                            logger.info(f'Transação blockchain registrada: tipo=reserva, dados={{"point_id": "{point_id}", "vehicle_id": "{vehicle_id}", "status": "COMMIT"}}, tx_hash={tx_hash}')
                         except Exception as e:
                             logger.warning(f'Erro ao registrar no blockchain: {e}')
                     return jsonify({'status': 'COMMITED'})
@@ -245,7 +248,8 @@ def create_server(server_config):
                             logger.info(f"Server {server_name.upper()}: Notified next vehicle {next_vehicle} for point {point_id}")
                     if registrar_transacao:
                         try:
-                            registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'ABORT'})
+                            tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'ABORT'})
+                            logger.info(f'Transação blockchain registrada: tipo=reserva, dados={{"point_id": "{point_id}", "vehicle_id": "{vehicle_id}", "status": "ABORT"}}, tx_hash={tx_hash}')
                         except Exception as e:
                             logger.warning(f'Erro ao registrar no blockchain: {e}')
                     return jsonify({"status": "ABORTED"})
