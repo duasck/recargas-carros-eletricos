@@ -1,3 +1,4 @@
+import json
 PORT_BASE = 5000
 SERVIDOR_A = PORT_BASE
 SERVIDOR_B = PORT_BASE + 1
@@ -22,14 +23,16 @@ BATTERY_CONSUMPTION = {
     "slow": 0.25
 }
 
+
+with open("keys.json", "r") as f:
+    KEYS = json.load(f)
+    COMPANY_PRIVATE_KEYS = {c["name"]: c["address"] for c in KEYS["companies"]}
+
+
+   
 # Contas Ethereum das empresas
-COMPANY_ACCOUNTS = {
-    "company_a": "0xAccount1",  # Substituir por endereço real
-    "company_b": "0xAccount2",
-    "company_c": "0xAccount3",
-    "company_d": "0xAccount4",
-    "company_e": "0xAccount5"
-}
+COMPANY_ACCOUNTS = COMPANY_PRIVATE_KEYS = {c["name"]: c["address"] for c in KEYS["companies"]}
+
 
 SERVERS = {
     "company_a": {

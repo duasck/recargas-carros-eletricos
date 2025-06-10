@@ -3,31 +3,37 @@ services:
   car_1:
     build:
       context: .
-    command: python -u car.py car_1 normal
+    command: python -u car.py car_1 slow
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car1
-    - DISCHARGE_RATE=normal
+    - DISCHARGE_RATE=slow
+    - CONTRACT_ADDRESS=None
+    - VEHICLE_PRIVATE_KEY=f41000a35d7412448bdcc9e5a16a1528780d39049fc976807a621a7b70eac989
     networks:
     - carros_net
   car_2:
     build:
       context: .
-    command: python -u car.py car_2 slow
+    command: python -u car.py car_2 fast
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car2
-    - DISCHARGE_RATE=slow
+    - DISCHARGE_RATE=fast
+    - CONTRACT_ADDRESS=None
+    - VEHICLE_PRIVATE_KEY=151648d37382e6a64ed6dd1610bf959337b9b779419bcb57b2110441f1918a04
     networks:
     - carros_net
   car_3:
     build:
       context: .
-    command: python -u car.py car_3 slow
+    command: python -u car.py car_3 normal
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car3
-    - DISCHARGE_RATE=slow
+    - DISCHARGE_RATE=normal
+    - CONTRACT_ADDRESS=None
+    - VEHICLE_PRIVATE_KEY=55dfd1575d7acecff73fab703044b7221e782fd2b32566f5ec5d41746ffc0f21
     networks:
     - carros_net
   car_4:
@@ -38,6 +44,8 @@ services:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car4
     - DISCHARGE_RATE=fast
+    - CONTRACT_ADDRESS=None
+    - VEHICLE_PRIVATE_KEY=c027a10c3de2e728f8357ffde9d811b5f918e4b5220fd86d2c5b3feaf764d1e8
     networks:
     - carros_net
   car_5:
@@ -48,6 +56,8 @@ services:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car5
     - DISCHARGE_RATE=fast
+    - CONTRACT_ADDRESS=None
+    - VEHICLE_PRIVATE_KEY=029a58f4d8e65dea71e453eadafffe5e84f40cf99d4051e2f046c415d45f55f0
     networks:
     - carros_net
 networks:

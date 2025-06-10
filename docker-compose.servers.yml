@@ -9,6 +9,9 @@ services:
     - 5000:5000
     networks:
     - carros_net
+    environment:
+    - CONTRACT_ADDRESS=None
+    - PRIVATE_KEY=8ee48f3ac827c9081a44ac0b1dedf9cbf2f3c97cd05106652dd78f5166f8600a
   server_b:
     build:
       context: .
@@ -18,6 +21,9 @@ services:
     - 5001:5001
     networks:
     - carros_net
+    environment:
+    - CONTRACT_ADDRESS=None
+    - PRIVATE_KEY=00443c2aaed0dce9a148831dc4862d925d031d95c1a67422facda3fd75014e84
   server_c:
     build:
       context: .
@@ -27,6 +33,9 @@ services:
     - 5002:5002
     networks:
     - carros_net
+    environment:
+    - CONTRACT_ADDRESS=None
+    - PRIVATE_KEY=d96bd0128650f51e3771875c316f3a9746b97eceeb4837beb8fb071988ec7d91
   server_d:
     build:
       context: .
@@ -36,6 +45,9 @@ services:
     - 5003:5003
     networks:
     - carros_net
+    environment:
+    - CONTRACT_ADDRESS=None
+    - PRIVATE_KEY=8e891f39c68403bb12855b0566e9bde5f096d9c82e17766903f2d74007a01f13
   server_e:
     build:
       context: .
@@ -45,6 +57,9 @@ services:
     - 5004:5004
     networks:
     - carros_net
+    environment:
+    - CONTRACT_ADDRESS=None
+    - PRIVATE_KEY=730e26b3fca5c4f6e2f7d6349f2ec952d613abc4902b54dd89a29355351ed319
   geth:
     image: ethereum/client-go
     container_name: geth
@@ -67,6 +82,28 @@ services:
     - ./mosquitto/log:/mosquitto/log
     networks:
     - carros_net
+  contract_deploy:
+    build:
+      context: .
+    command: python blockchain/deploy_contract.py
+    container_name: contract_deploy
+    networks:
+    - carros_net
+    depends_on:
+    - geth
+  transactions_api:
+    build:
+      context: .
+    command: python api/transactions.py
+    container_name: transactions_api
+    ports:
+    - 5100:5100
+    networks:
+    - carros_net
+    environment:
+    - CONTRACT_ADDRESS=None
+    depends_on:
+    - geth
 networks:
   carros_net:
     driver: bridge

@@ -3,8 +3,14 @@ import os
 import yaml
 import global_utils.constants as CONST
 import random
-
+import json
 DEFAULT_NUM_CARS = 5
+
+with open("keys.json", "r") as f:
+    KEYS = json.load(f)
+    COMPANY_PRIVATE_KEYS = {c["name"]: c["private_key"] for c in KEYS["companies"]}
+    VEHICLE_PRIVATE_KEYS = {v["id"]: v["private_key"] for v in KEYS["vehicles"]}
+
 
 def generate_servers_compose(servers_port):
     services = {}
@@ -19,7 +25,7 @@ def generate_servers_compose(servers_port):
             "networks": ["carros_net"],
             "environment": [
                 f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS')}",
-                "PRIVATE_KEY=0xYourPrivateKey"  # Substituir por chave real
+                f"PRIVATE_KEY={COMPANY_PRIVATE_KEYS[f'company_{company}']}"
             ]
         }
     services["geth"] = {
@@ -81,7 +87,7 @@ def generate_cars_compose(num_cars, mqtt_broker):
                 f"VEHICLE_ID=car{i}",
                 f"DISCHARGE_RATE={discharge_rate}",
                 f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS')}",
-                "VEHICLE_PRIVATE_KEY=0xVehiclePrivateKey"  # Substituir por chave real
+                f"VEHICLE_PRIVATE_KEY={VEHICLE_PRIVATE_KEYS.get(f'car_{i}', '0xDefaultKey')}"
             ],
             "networks": ["carros_net"]
         }
