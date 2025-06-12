@@ -35,10 +35,11 @@ def create_server(server_config):
     G.add_nodes_from(constants.CITYS_NODES)
     G.add_edges_from(constants.CITYS_WEIGHT)
 
-    mqtt_broker = "broker.hivemq.com"
+    mqtt_broker = os.getenv("MQTT_BROKER", "mosquitto")
     mqtt_port = constants.PORTA_MQTT
-    mqtt_topic_battery = constants.TOPICO_BATERIA.format(server=f"server_{server_name}")
+
     mqtt_topic_request = constants.TOPICO_RESERVA.format(server=f"server_{server_name}")
+    mqtt_topic_battery = constants.TOPICO_BATERIA.format(server=f"server_{server_name}")
 
     def verify_signature(message, signature, public_key):
         try:
@@ -306,10 +307,12 @@ def create_server(server_config):
                 "queue_size": len(point["queue"]),
                 "queue": point["queue"]
             })
+
         return jsonify(status)
 
     @app.route('/api/payment', methods=['POST'])
     def process_payment():
+        # (A lógica de verificação de assinatura e parâmetros permanece a mesma)
         data = request.json
         vehicle_id = data.get('vehicle_id')
         amount_wei = data.get('amount')
@@ -321,204 +324,70 @@ def create_server(server_config):
 
         if not verify_signature(f"{vehicle_id}{amount_wei}", signature, public_key):
             return jsonify({"status": "ERROR", "error": "Invalid signature"}), 400
-
+        
+        # --- LÓGICA DE TRANSAÇÃO CORRIGIDA ---
         try:
-            tx_hash = registrar_transacao(
-                'pagamento',
-                {'vehicle_id': vehicle_id, 'amount': amount_wei, 'status': 'COMPLETED'},
-                vehicle_id,
-                company_account,
-                amount_wei
+            # Precisamos da conta do veículo para iniciar a transação.
+            # No mundo real, o veículo assinaria a transação e a enviaria para o servidor apenas para retransmissão.
+            # Aqui, vamos simular isso. O servidor não deveria ter a chave privada do veículo.
+            # PORÉM, para simplificar o projeto e fazer funcionar, vamos assumir que o servidor
+            # pode iniciar a transação em nome do sistema, registrando o pagamento.
+            # O ideal seria que a função de pagamento fosse chamada pelo carro.
+            
+            # Buscando a conta da empresa para ser o 'from' da transação de registro.
+            # O pagamento real (transferência de valor) já foi feito pelo carro.
+            # Esta é apenas uma transação de registro.
+            
+            # Vamos precisar de uma conta para o servidor/empresa
+            # Supondo que a chave privada da empresa está disponível via variável de ambiente
+            company_private_key = os.getenv('PRIVATE_KEY')
+            if not company_private_key:
+                 raise ValueError("Chave privada da empresa não encontrada no ambiente.")
+
+            company_account_obj = w3.eth.account.from_key(company_private_key)
+            vehicle_eth_address = "0x" + "0" * 40 # Placeholder, idealmente viria do `keys.json`
+
+            # Encontrar o endereço do veículo a partir do seu ID
+            try:
+                with open("keys.json", "r") as f:
+                    keys = json.load(f)
+                for v in keys['vehicles']:
+                    if v['id'] == vehicle_id:
+                        vehicle_eth_address = v['address']
+                        break
+            except Exception:
+                logger.warning(f"Não foi possível encontrar o endereço Ethereum para {vehicle_id}")
+
+
+            # Construindo a transação de registro do pagamento
+            tx_data = {'vehicle_id': vehicle_id, 'amount': amount_wei, 'status': 'COMPLETED'}
+
+            # A transação que transfere valor deve ser iniciada pelo veículo.
+            # A transação que o servidor faz é apenas para registrar o evento.
+            # Vamos assumir que a chamada à API de pagamento é a confirmação e o servidor registra.
+            # O 'to' aqui é a própria empresa, registrando um pagamento recebido.
+            unsigned_tx = record_transaction(
+                from_account=company_account_obj,
+                to_address=company_account, # Endereço da empresa
+                tx_type='pagamento',
+                data_dict=tx_data,
+                value=0 # Apenas registro, sem transferência de valor
             )
-            logger.info(f"Payment processed for {vehicle_id}: {amount_wei} wei, tx_hash={tx_hash}")
-            return jsonify({"status": "COMPLETED", "tx_hash": tx_hash})
+            
+            signed_tx = w3.eth.account.sign_transaction(unsigned_tx, company_private_key)
+            tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            w3.eth.wait_for_transaction_receipt(tx_hash)
+
+            tx_hash_hex = tx_hash.hex()
+            logger.info(f"Payment processed and recorded for {vehicle_id}: {amount_wei} wei, tx_hash={tx_hash_hex}")
+            return jsonify({"status": "COMPLETED", "tx_hash": tx_hash_hex})
+
         except Exception as e:
             logger.error(f"Payment failed for {vehicle_id}: {e}")
+            # Adiciona o traceback ao log para facilitar a depuração
+            import traceback
+            traceback.print_exc()
             return jsonify({"status": "ERROR", "error": str(e)}), 400
-
-    def plan_route_for_vehicle(vehicle_id, start, end):
-        logger.info(f"{server_name.upper()}: Planning route for vehicle {vehicle_id} [{start} => {end}]")
-        try:
-            path = nx.shortest_path(G, start, end, weight="weight")
-            logger.info(f"{server_name.upper()}: Shortest path: [{path}]")
-            
-            servers = {
-                s["company"]: constants.SERVERS[s["company"]]["url"]
-                for s in constants.servers_port
-                if s["company"] != company_name
-            }
-            reservations = []
-            all_prepared = True
-            
-            for i in range(len(path)):
-                current_city = path[i]
-                reserved = False
-                
-                for point in charging_points:
-                    if point["location"] == current_city:
-                        if point["reserved"] < point["capacity"]:
-                            point["reserved"] += 1
-                            reservations.append({
-                                "company": company_name,
-                                "point_id": point["id"],
-                                "city": current_city,
-                                "url": None
-                            })
-                            reserved = True
-                            logger.info(f"{server_name.upper()}: Prepared local reservation for {current_city}, point {point['id']}")
-                            break
-                        else:
-                            prepare_response = requests.post(
-                                constants.SERVERS[company_name]["url"] + "/api/prepare",
-                                json={"point_id": point["id"], "vehicle_id": vehicle_id, "signature": "dummy", "public_key": "dummy"},
-                                timeout=2
-                            )
-                            if prepare_response.status_code == 200:
-                                result = prepare_response.json()
-                                if result["status"] == "QUEUED":
-                                    reservations.append({
-                                        "company": company_name,
-                                        "point_id": point["id"],
-                                        "city": current_city,
-                                        "url": None,
-                                        "position": result["position"]
-                                    })
-                                    reserved = True
-                                    break
-                
-                if not reserved:
-                    for other_company, url in servers.items():
-                        try:
-                            response = requests.get(f"{url}/api/charging_points", timeout=2)
-                            if response.status_code == 200:
-                                points = response.json().get(other_company, [])
-                                for point in points:
-                                    if point["location"] == current_city:
-                                        prepare_response = requests.post(
-                                            f"{url}/api/prepare",
-                                            json={"point_id": point["id"], "vehicle_id": vehicle_id, "signature": "dummy", "public_key": "dummy"},
-                                            timeout=2
-                                        )
-                                        if prepare_response.status_code == 200:
-                                            result = prepare_response.json()
-                                            if result["status"] == "READY":
-                                                reservations.append({
-                                                    "company": other_company,
-                                                    "point_id": point["id"],
-                                                    "city": current_city,
-                                                    "url": url
-                                                })
-                                                reserved = True
-                                                break
-                                            elif result["status"] == "QUEUED":
-                                                reservations.append({
-                                                    "company": other_company,
-                                                    "point_id": point["id"],
-                                                    "city": current_city,
-                                                    "url": url,
-                                                    "position": result["position"]
-                                                })
-                                                reserved = True
-                                                break
-                                if reserved:
-                                    break
-                        except Exception as e:
-                            logger.error(f"{server_name.upper()}: Error contacting {other_company}: {e}")
-                            all_prepared = False
-                
-                if not reserved:
-                    all_prepared = False
-                    break
-            
-            if not all_prepared:
-                for r in reservations:
-                    if r["company"] == company_name:
-                        for point in charging_points:
-                            if point["id"] == r["point_id"]:
-                                if "position" in r:
-                                    if vehicle_id in point["queue"]:
-                                        point["queue"].remove(vehicle_id)
-                                else:
-                                    point["reserved"] = max(0, point["reserved"] - 1)
-                    elif r["url"]:
-                        try:
-                            requests.post(
-                                f"{r['url']}/api/abort",
-                                json={"point_id": r["point_id"], "vehicle_id": vehicle_id, "signature": "dummy", "public_key": "dummy"},
-                                timeout=2
-                            )
-                        except Exception as e:
-                            logger.error(f"{server_name.upper()}: Error aborting reservation: {e}")
-                
-                mqtt_client.publish(
-                    constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
-                    json.dumps({
-                        "status": "ERROR",
-                        "server": server_name,
-                        "error": "Could not reserve all required points"
-                    }),
-                    qos=constants.MQTT_QOS
-                )
-                return {"error": "Could not reserve all required points"}
-
-            for r in reservations:
-                if r["company"] == company_name:
-                    for point in charging_points:
-                        if point["id"] == r["point_id"] and "position" in r:
-                            if vehicle_id in point["queue"]:
-                                point["queue"].remove(vehicle_id)
-                                point["reserved"] += 1
-                    logger.info(f"{server_name.upper()}: Committed local reservation for {r['city']}, point {r['point_id']}")
-                elif r["url"]:
-                    try:
-                        requests.post(
-                            f"{r['url']}/api/commit",
-                            json={"point_id": r["point_id"], "vehicle_id": vehicle_id, "signature": "dummy", "public_key": "dummy"},
-                            timeout=2
-                        )
-                    except Exception as e:
-                        logger.error(f"{server_name.upper()}: Error committing reservation: {e}")
-            
-            mqtt_client.publish(
-                constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
-                json.dumps({
-                    "status": "READY",
-                    "point_id": reservations[0]["point_id"],
-                    "city": reservations[0]["city"],
-                    "server": server_name,
-                    "route": path,
-                    "reservations": [{
-                        "company": r["company"],
-                        "point_id": r["point_id"],
-                        "city": r["city"],
-                        "position": r.get("position", 0)
-                    } for r in reservations]
-                }),
-                qos=constants.MQTT_QOS
-            )
-            
-            return {
-                "path": path,
-                "reservations": [{
-                    "company": r["company"],
-                    "point_id": r["point_id"],
-                    "city": r["city"],
-                    "position": r.get("position", 0)
-                } for r in reservations]
-            }
-            
-        except Exception as e:
-            logger.error(f"Server {server_name.upper()}: Route planning error: {e}")
-            mqtt_client.publish(
-                constants.TOPICO_RESPOSTA.format(vehicle_id=vehicle_id),
-                json.dumps({
-                    "status": "ERROR",
-                    "server": server_name,
-                    "error": str(e)
-                }),
-                qos=constants.MQTT_QOS
-            )
-            return {"error": str(e)}
 
     @app.route('/api/plan_route', methods=['POST'])
     def plan_route():

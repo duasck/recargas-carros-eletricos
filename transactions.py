@@ -16,6 +16,10 @@ w3 = Web3(Web3.HTTPProvider(ETH_NODE_URL))
 
 # Endereço do contrato e ABI
 CONTRACT_ADDRESS = os.getenv('CONTRACT_ADDRESS')
+if not CONTRACT_ADDRESS and os.path.exists('/app/blockchain/contract_address.txt'):
+    with open('/app/blockchain/contract_address.txt', 'r') as f:
+        CONTRACT_ADDRESS = f.read().strip()
+
 with open('/app/blockchain/contract_abi.json', 'r') as f:
     CONTRACT_ABI = json.load(f)
 

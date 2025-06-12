@@ -1,21 +1,29 @@
+#!/usr/bin/python
 import sys
 import os
 import yaml
+import json
 import global_utils.constants as CONST
 import random
-import json
+
 DEFAULT_NUM_CARS = 5
 
-with open("keys.json", "r") as f:
-    KEYS = json.load(f)
+# Carregar chaves do keys.json, se disponível
+try:
+    with open("keys.json", "r") as f:
+        KEYS = json.load(f)
     COMPANY_PRIVATE_KEYS = {c["name"]: c["private_key"] for c in KEYS["companies"]}
     VEHICLE_PRIVATE_KEYS = {v["id"]: v["private_key"] for v in KEYS["vehicles"]}
-
+except FileNotFoundError:
+    print("Aviso: keys.json não encontrado. Usando chaves placeholder.")
+    COMPANY_PRIVATE_KEYS = {f"company_{chr(97+i)}": "0xPlaceholderKey" for i in range(5)}
+    VEHICLE_PRIVATE_KEYS = {f"car_{i+1}": "0xPlaceholderVehicleKey" for i in range(5)}
 
 def generate_servers_compose(servers_port):
     services = {}
     for s in servers_port:
         company = s["name"].lower()
+        company_full_name = s["company"]
         port = s["port"]
         services[f"server_{company}"] = {
             "build": {"context": "."},
@@ -24,17 +32,39 @@ def generate_servers_compose(servers_port):
             "ports": [f"{port}:{port}"],
             "networks": ["carros_net"],
             "environment": [
-                f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS')}",
-                f"PRIVATE_KEY={COMPANY_PRIVATE_KEYS[f'company_{company}']}"
+                f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS', '')}",
+                f"PRIVATE_KEY={COMPANY_PRIVATE_KEYS.get(company_full_name, '0xPlaceholderKey')}",
+                "MQTT_BROKER=mosquitto"
+            ],
+            "depends_on": {
+                "geth": {"condition": "service_healthy"},
+                "mosquitto": {"condition": "service_healthy"},
+                "contract_deploy": {"condition": "service_completed_successfully"}
+            },
+            "volumes": [
+                "./blockchain:/app/blockchain"
             ]
         }
+
     services["geth"] = {
-        "image": "ethereum/client-go",
+        "build": {
+            "context": "./geth_custom"
+        },
         "container_name": "geth",
         "ports": ["8545:8545", "30303:30303"],
-        "command": "--dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal --http.corsdomain=* --http.vhosts=*",
-        "networks": ["carros_net"]
+        # --- CORREÇÃO AQUI ---
+        # Removendo o prefixo "http." da flag, o nome correto é --allow-insecure-unlock
+        "command": "--dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal,admin --http.corsdomain=* --http.vhosts=* --allow-insecure-unlock",
+        "networks": ["carros_net"],
+        "healthcheck": {
+            "test": ["CMD-SHELL", "nc -z localhost 8545 || exit 1"],
+            "interval": "5s",
+            "timeout": "5s",
+            "retries": 25,
+            "start_period": "15s"
+        }
     }
+
     services["mosquitto"] = {
         "image": "eclipse-mosquitto",
         "container_name": "mosquitto",
@@ -44,32 +74,48 @@ def generate_servers_compose(servers_port):
             "./mosquitto/data:/mosquitto/data",
             "./mosquitto/log:/mosquitto/log"
         ],
-        "networks": ["carros_net"]
+        "networks": ["carros_net"],
+        "healthcheck": {
+            "test": ["CMD-SHELL", "nc -z localhost 18833 || exit 1"],
+            "interval": "5s",
+            "timeout": "5s",
+            "retries": 10
+        },
+        "restart": "unless-stopped"
     }
     services["contract_deploy"] = {
         "build": {"context": "."},
         "command": "python blockchain/deploy_contract.py",
         "container_name": "contract_deploy",
         "networks": ["carros_net"],
-        "depends_on": ["geth"]
+        "environment": [
+            f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS', '')}",
+            f"PRIVATE_KEY={COMPANY_PRIVATE_KEYS.get('company_a', '0xPlaceholderKey')}"
+        ],
+        "depends_on": {
+            "geth": {"condition": "service_healthy"}
+        },
+        "volumes": [
+            "./blockchain:/app/blockchain"
+        ]
     }
     services["transactions_api"] = {
         "build": {"context": "."},
-        "command": "python api/transactions.py",
+        "command": "python transactions.py",
         "container_name": "transactions_api",
         "ports": ["5100:5100"],
         "networks": ["carros_net"],
         "environment": [
-            f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS')}"
+            f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS', '')}"
         ],
-        "depends_on": ["geth"]
-    }
-    compose = {
-        "version": "3.8",
-        "services": services,
-        "networks": {
-            "carros_net": {"driver": "bridge"}
-        }
+        "depends_on": {
+            "geth": {"condition": "service_healthy"},
+            "mosquitto": {"condition": "service_healthy"},
+            "contract_deploy": {"condition": "service_completed_successfully"}
+        },
+        "volumes": [
+            "./blockchain:/app/blockchain"
+        ]
     }
     return compose
 
@@ -86,13 +132,20 @@ def generate_cars_compose(num_cars, mqtt_broker):
                 f"MQTT_BROKER={mqtt_broker}",
                 f"VEHICLE_ID=car{i}",
                 f"DISCHARGE_RATE={discharge_rate}",
-                f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS')}",
-                f"VEHICLE_PRIVATE_KEY={VEHICLE_PRIVATE_KEYS.get(f'car_{i}', '0xDefaultKey')}"
+                f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS', '')}",
+                f"VEHICLE_PRIVATE_KEY={VEHICLE_PRIVATE_KEYS.get(f'car_{i}', '0xPlaceholderVehicleKey')}"
             ],
-            "networks": ["carros_net"]
+            "networks": ["carros_net"],
+            "depends_on": {
+                "geth": {"condition": "service_healthy"},
+                "mosquitto": {"condition": "service_healthy"},
+                "contract_deploy": {"condition": "service_completed_successfully"}
+            },
+            "volumes": [
+                "./blockchain:/app/blockchain"
+            ]
         }
     compose = {
-        "version": "3.8",
         "services": services,
         "networks": {
             "carros_net": {"driver": "bridge"}
@@ -103,7 +156,7 @@ def generate_cars_compose(num_cars, mqtt_broker):
 if __name__ == "__main__":
     servers_port = CONST.servers_port
     num_cars = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_NUM_CARS
-    mqtt_broker = os.getenv("MQTT_BROKER", "broker.hivemq.com")
+    mqtt_broker = os.getenv("MQTT_BROKER", "mosquitto")
 
     servers_compose = generate_servers_compose(servers_port)
     cars_compose = generate_cars_compose(num_cars, mqtt_broker)

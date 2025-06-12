@@ -1,81 +1,84 @@
-# Módulo para registrar transações no blockchain Ethereum
-from web3 import Web3
 import os
 import json
+import time
+from web3 import Web3
 
-# Conexão com o nó Ethereum
 ETH_NODE_URL = os.getenv('ETH_NODE_URL', 'http://geth:8545')
 w3 = Web3(Web3.HTTPProvider(ETH_NODE_URL))
 
-# Endereço do contrato e ABI
+# Aguardar contract_abi.json
+for _ in range(30):
+    if os.path.exists('/app/blockchain/contract_abi.json'):
+        with open('/app/blockchain/contract_abi.json', 'r') as f:
+            CONTRACT_ABI = json.load(f)
+        break
+    print("Aguardando contract_abi.json...")
+    time.sleep(2)
+else:
+    raise FileNotFoundError("contract_abi.json não encontrado após espera")
+
+# Ler endereço do contrato
 CONTRACT_ADDRESS = os.getenv('CONTRACT_ADDRESS')
-with open('/app/blockchain/contract_abi.json', 'r') as f:
-    CONTRACT_ABI = json.load(f)
+if not CONTRACT_ADDRESS and os.path.exists('/app/blockchain/contract_address.txt'):
+    with open('/app/blockchain/contract_address.txt', 'r') as f:
+        CONTRACT_ADDRESS = f.read().strip()
 
-contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+if not CONTRACT_ADDRESS:
+    raise ValueError("CONTRACT_ADDRESS não definido")
 
-def get_default_account():
-    try:
-        accounts = w3.eth.accounts
-        if accounts:
-            return accounts[0]
-    except Exception:
-        pass
-    return None
+# Converter endereço para formato checksum
+checksum_address = w3.to_checksum_address(CONTRACT_ADDRESS)
+contract = w3.eth.contract(address=checksum_address, abi=CONTRACT_ABI)
 
-def register_identity(account, identity):
-    """
-    Registra uma identidade no contrato.
-    """
-    try:
-        tx = contract.functions.registerIdentity(identity).build_transaction({
-            'from': account,
-            'nonce': w3.eth.get_transaction_count(account),
-            'gas': 200000,
-            'gasPrice': w3.eth.gas_price
-        })
-        signed_tx = w3.eth.account.sign_transaction(tx, os.getenv('PRIVATE_KEY'))
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        return tx_hash.hex()
-    except Exception as e:
-        raise Exception(f'Erro ao registrar identidade: {e}')
+# --- FUNÇÕES CORRIGIDAS ---
 
-def deposit(account, amount_wei):
+def record_transaction(from_account, to_address, tx_type, data_dict, value=0):
     """
-    Deposita saldo no contrato.
+    Constrói uma transação para chamar a função `recordTransaction` do Smart Contract.
+    
+    :param from_account: O objeto da conta (com chave privada) que está enviando a transação.
+    :param to_address: O endereço de destino da transação (ex: conta da empresa).
+    :param tx_type: O tipo de transação (ex: 'pagamento', 'reserva').
+    :param data_dict: Um dicionário Python com os dados a serem salvos. Será convertido para JSON.
+    :param value: O valor em WEI a ser transferido (padrão é 0).
+    :return: A transação construída, pronta para ser assinada e enviada.
     """
-    try:
-        tx = contract.functions.deposit().build_transaction({
-            'from': account,
-            'value': amount_wei,
-            'nonce': w3.eth.get_transaction_count(account),
-            'gas': 200000,
-            'gasPrice': w3.eth.gas_price
-        })
-        signed_tx = w3.eth.account.sign_transaction(tx, os.getenv('PRIVATE_KEY'))
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        return tx_hash.hex()
-    except Exception as e:
-        raise Exception(f'Erro ao depositar: {e}')
+    from_address_checksum = w3.to_checksum_address(from_account.address)
+    to_address_checksum = w3.to_checksum_address(to_address)
+    
+    # Converte o dicionário de dados para uma string JSON
+    data_json = json.dumps(data_dict)
 
-def registrar_transacao(tipo, dados, from_account, to_account, amount_wei=0):
-    """
-    Registra uma transação no contrato.
-    tipo: 'reserva', 'recarga', 'pagamento'
-    dados: dict com informações relevantes
-    """
-    try:
-        data_str = json.dumps(dados)
-        tx = contract.functions.recordTransaction(
-            to_account, amount_wei, tipo, data_str
-        ).build_transaction({
-            'from': from_account,
-            'nonce': w3.eth.get_transaction_count(from_account),
-            'gas': 300000,
-            'gasPrice': w3.eth.gas_price
-        })
-        signed_tx = w3.eth.account.sign_transaction(tx, os.getenv('PRIVATE_KEY'))
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        return tx_hash.hex()
-    except Exception as e:
-        raise Exception(f'Erro ao registrar transação: {e}')
+    tx = contract.functions.recordTransaction(
+        to_address_checksum,
+        value,
+        tx_type,
+        data_json
+    ).build_transaction({
+        'from': from_address_checksum,
+        'value': value, # A função do contrato não é payable, mas a transação pode ter valor
+        'nonce': w3.eth.get_transaction_count(from_address_checksum),
+        'gas': 500000, # Um valor mais razoável para a transação
+        'gasPrice': w3.eth.gas_price
+    })
+    return tx
+
+
+def register_identity(_from, _id):
+    tx = contract.functions.registerIdentity(_id).build_transaction({
+        'from': w3.to_checksum_address(_from.address),
+        'nonce': w3.eth.get_transaction_count(w3.to_checksum_address(_from.address)),
+        'gas': 200000,
+        'gasPrice': w3.eth.gas_price
+    })
+    return tx
+
+def deposit(_from, _value):
+    tx = contract.functions.deposit().build_transaction({
+        'from': w3.to_checksum_address(_from.address),
+        'value': _value,
+        'nonce': w3.eth.get_transaction_count(w3.to_checksum_address(_from.address)),
+        'gas': 200000,
+        'gasPrice': w3.eth.gas_price
+    })
+    return tx

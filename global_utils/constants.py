@@ -6,7 +6,7 @@ SERVIDOR_C = PORT_BASE + 2
 SERVIDOR_D = PORT_BASE + 3
 SERVIDOR_E = PORT_BASE + 4
 
-PORTA_MQTT = 1883
+PORTA_MQTT = 18833
 TOPICO_BATERIA = "vehicle/{server}/battery"
 TOPICO_RESERVA = "charging/{server}/request"
 TOPICO_RESPOSTA = "charging/{vehicle_id}/response"
