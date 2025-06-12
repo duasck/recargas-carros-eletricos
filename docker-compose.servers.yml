@@ -34,6 +34,8 @@ services:
     environment:
     - PRIVATE_KEY=142f5185f1474cbac187d772a6db128d895de4e1aee7141249d550c944bb8ecb
     - ETH_NODE_URL=http://geth:8545
+    volumes:
+    - ./blockchain:/app/blockchain
   server_a:
     build:
       context: .
@@ -50,6 +52,8 @@ services:
     depends_on:
       contract_deploy:
         condition: service_completed_successfully
+    volumes:
+    - ./blockchain:/app/blockchain
   server_b:
     build:
       context: .
@@ -66,6 +70,8 @@ services:
     depends_on:
       contract_deploy:
         condition: service_completed_successfully
+    volumes:
+    - ./blockchain:/app/blockchain
   server_c:
     build:
       context: .
@@ -82,6 +88,8 @@ services:
     depends_on:
       contract_deploy:
         condition: service_completed_successfully
+    volumes:
+    - ./blockchain:/app/blockchain
   server_d:
     build:
       context: .
@@ -98,6 +106,8 @@ services:
     depends_on:
       contract_deploy:
         condition: service_completed_successfully
+    volumes:
+    - ./blockchain:/app/blockchain
   server_e:
     build:
       context: .
@@ -114,6 +124,8 @@ services:
     depends_on:
       contract_deploy:
         condition: service_completed_successfully
+    volumes:
+    - ./blockchain:/app/blockchain
   transactions_api:
     build:
       context: .
@@ -129,6 +141,8 @@ services:
     environment:
     - CONTRACT_ADDRESS=None
     - ETH_NODE_URL=http://geth:8545
+    volumes:
+    - ./blockchain:/app/blockchain
 networks:
   carros_net:
     driver: bridge

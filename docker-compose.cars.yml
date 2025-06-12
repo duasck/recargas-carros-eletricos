@@ -2,29 +2,33 @@ services:
   car_1:
     build:
       context: .
-    command: python -u car.py car_1 fast
+    command: python -u car.py car_1 normal
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car1
-    - DISCHARGE_RATE=fast
+    - DISCHARGE_RATE=normal
     - CONTRACT_ADDRESS=None
     - VEHICLE_PRIVATE_KEY=8d508634cd6922661c52e337c58c2aa6232762ef2c2a9087414cf365283e2202
     - ETH_NODE_URL=http://geth:8545
     networks:
     - carros_net
+    volumes:
+    - ./blockchain:/app/blockchain
   car_2:
     build:
       context: .
-    command: python -u car.py car_2 slow
+    command: python -u car.py car_2 fast
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car2
-    - DISCHARGE_RATE=slow
+    - DISCHARGE_RATE=fast
     - CONTRACT_ADDRESS=None
     - VEHICLE_PRIVATE_KEY=4fbc8a7099ecbd80ea0da038682894618a27b6b0d17d20befb1b3933d1b5e8d3
     - ETH_NODE_URL=http://geth:8545
     networks:
     - carros_net
+    volumes:
+    - ./blockchain:/app/blockchain
   car_3:
     build:
       context: .
@@ -38,32 +42,38 @@ services:
     - ETH_NODE_URL=http://geth:8545
     networks:
     - carros_net
+    volumes:
+    - ./blockchain:/app/blockchain
   car_4:
     build:
       context: .
-    command: python -u car.py car_4 fast
+    command: python -u car.py car_4 slow
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car4
-    - DISCHARGE_RATE=fast
+    - DISCHARGE_RATE=slow
     - CONTRACT_ADDRESS=None
     - VEHICLE_PRIVATE_KEY=5a0076cbf5c12fff33193ecad59deb743550daab5773ca7d5f6b17ee42c3e674
     - ETH_NODE_URL=http://geth:8545
     networks:
     - carros_net
+    volumes:
+    - ./blockchain:/app/blockchain
   car_5:
     build:
       context: .
-    command: python -u car.py car_5 slow
+    command: python -u car.py car_5 fast
     environment:
     - MQTT_BROKER=broker.hivemq.com
     - VEHICLE_ID=car5
-    - DISCHARGE_RATE=slow
+    - DISCHARGE_RATE=fast
     - CONTRACT_ADDRESS=None
     - VEHICLE_PRIVATE_KEY=916e91925e08c4a24d5b880be7d49b057cc34be2ba498fdbfdf1b8428d6fd0eb
     - ETH_NODE_URL=http://geth:8545
     networks:
     - carros_net
+    volumes:
+    - ./blockchain:/app/blockchain
 networks:
   carros_net:
     driver: bridge

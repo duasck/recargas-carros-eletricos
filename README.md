@@ -7,6 +7,7 @@ Este projeto simula um sistema distribuído de recarga de carros elétricos, com
 - [Pré-requisitos](#pré-requisitos)
 - [Instalação Local](#instalação-local)
 - [Execução com Docker Compose](#execução-com-docker-compose)
+- [Execução Manual Passo a Passo](#execução-manual-passo-a-passo)
 - [Execução Distribuída](#execução-distribuída-2-computadores)
 - [Gerando arquivos docker-compose](#gerando-arquivos-docker-compose-automaticamente)
 - [Como encontrar o IP do container](#como-encontrar-o-ip-do-container-docker-dos-servidores)
@@ -69,6 +70,127 @@ Este projeto simula um sistema distribuído de recarga de carros elétricos, com
    ```sh
    docker compose -f docker-compose.cars.yml up --build
    ```
+
+## Execução Manual Passo a Passo
+
+Para executar o sistema sem depender do `run.sh`, útil para testar partes do sistema isoladamente e entender o fluxo de execução.
+
+### Pré-requisitos para Execução Manual
+- Geth (Ethereum client)
+- Docker e Docker Compose
+- Python 3 com `web3`, `solcx`, `dotenv` instalados
+- Arquivo `keys.json` corretamente preenchido
+- Containers definidos nos arquivos `docker-compose.servers.yml` e `docker-compose.cars.yml`
+
+### 1. Gerar os arquivos Docker Compose
+
+Rode o script Python que cria os arquivos `docker-compose` com os serviços de servidores e carros:
+
+```bash
+python generate_compose.py 5
+```
+
+Isso criará ou atualizará os arquivos:
+- `docker-compose.servers.yml`
+- `docker-compose.cars.yml`
+
+### 2. Subir apenas o Geth
+
+Suba só o Geth para conseguir enviar ETH depois:
+
+```bash
+docker compose -f docker-compose.servers.yml up -d geth
+```
+
+### 3. Verifique se o Geth está saudável
+
+Aguarde o healthcheck ficar OK:
+
+```bash
+docker inspect -f '{{.State.Health.Status}}' geth
+```
+
+Repita até aparecer:
+```
+healthy
+```
+
+### 4. Enviar ETH para o deployer
+
+Abra o console do Geth:
+
+```bash
+docker exec -it geth geth attach http://localhost:8545
+```
+
+E, dentro do console, envie ETH para o deployer (pegue o endereço do `keys.json`):
+
+```js
+eth.sendTransaction({
+  from: eth.accounts[0],
+  to: "0x66B0CEEf72EB99842bE1F701198f5306b1A8f29f",
+  value: web3.toWei(100, "ether")
+})
+```
+
+Depois, envie ETH para os carros:
+
+```js
+eth.sendTransaction({from: eth.accounts[0], to: "0x76d8950c9a4E4C7DD8531D7f736B028CaE4b4BED", value: web3.toWei(100, "ether")})
+eth.sendTransaction({from: eth.accounts[0], to: "0x862a43935a6bb4609C48aA4f7220dDac40f4cFA4", value: web3.toWei(100, "ether")})
+eth.sendTransaction({from: eth.accounts[0], to: "0x3D6B78B0A8fe9e663ad55714dB087320DA63e331", value: web3.toWei(100, "ether")})
+eth.sendTransaction({from: eth.accounts[0], to: "0xDD3Fa2e1415D6f3E6150381890B0F034c569962f", value: web3.toWei(100, "ether")})
+eth.sendTransaction({from: eth.accounts[0], to: "0x90Bc0742d504Aef8b090Ef936DB13a146F654fcF", value: web3.toWei(100, "ether")})
+```
+
+Depois, digite `exit` para sair do console.
+
+### 5. Fazer o deploy do contrato
+
+Agora sim, com o deployer com saldo, rode o container que faz o deploy:
+
+```bash
+docker compose -f docker-compose.servers.yml up --build contract_deploy
+```
+
+Você deve ver uma mensagem como:
+```
+Contrato implantado em: 0x...
+```
+
+Isso indica que o contrato foi implantado com sucesso e o endereço está salvo no `.env`.
+
+### 6. Subir os servidores
+
+Agora você pode subir os demais servidores:
+
+```bash
+docker compose -f docker-compose.servers.yml up --build -d
+```
+
+### 7. Subir os carros
+
+Por fim, suba os carros:
+
+```bash
+docker compose -f docker-compose.cars.yml up --build
+```
+
+### 8. Verificar se tudo está funcionando
+
+Use:
+
+```bash
+docker ps
+```
+
+Verifique se os containers de:
+- `geth`
+- `contract_deploy` (deve ter parado com sucesso)
+- `server_a`, `server_b`, ...
+- `car_1`, `car_2`, ...
+
+estão em execução ou foram iniciados corretamente.
 
 ## Execução Distribuída (2 computadores)
 

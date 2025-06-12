@@ -4,6 +4,7 @@ import yaml
 import constants as CONST
 import random
 import json
+
 DEFAULT_NUM_CARS = 5
 
 with open("keys.json", "r") as f:
@@ -47,7 +48,9 @@ def generate_servers_compose(servers_port):
         "environment": [
             f"PRIVATE_KEY={DEPLOYER_PRIVATE_KEY}",
             "ETH_NODE_URL=http://geth:8545"
-        ]
+        ],"volumes": [
+            "./blockchain:/app/blockchain"
+        ],
     }
 
     # Servidores das empresas
@@ -73,7 +76,10 @@ def generate_servers_compose(servers_port):
             ],
             "depends_on": {
                 "contract_deploy": {"condition": "service_completed_successfully"}
-            }
+            },
+            "volumes": [ 
+                "./blockchain:/app/blockchain"
+            ]
         }
     
     # Transactions API
@@ -89,7 +95,9 @@ def generate_servers_compose(servers_port):
         "environment": [
             f"CONTRACT_ADDRESS={os.getenv('CONTRACT_ADDRESS', 'None')}",
             "ETH_NODE_URL=http://geth:8545"
-        ]
+        ],"volumes": [
+            "./blockchain:/app/blockchain"
+        ],
     }
     
     compose = {
@@ -122,6 +130,9 @@ def generate_cars_compose(num_cars, mqtt_broker):
                 "ETH_NODE_URL=http://geth:8545"
             ],
             "networks": ["carros_net"],
+            "volumes": [
+            "./blockchain:/app/blockchain"
+        ],
         }
     compose = {
         "services": services,

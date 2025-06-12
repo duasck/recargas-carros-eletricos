@@ -140,9 +140,7 @@ def create_server(server_config):
             response = {'status': 'READY', 'route': result['path'], 'reservations': result['reservations']}
 
         mqtt_client.publish(response_topic, json.dumps(response), qos=constants.MQTT_QOS)
-        logger.info(f"{server_name.upper()}: Sent route response to {vehicle_id}")
-
-    def on_connect(client, userdata, flags, rc):
+        logger.info(f"{server_name.upper()}: Sent route response to {vehicle_id}")    def on_connect(client, userdata, flags, rc, properties=None):
         logger.info(f"{server_name.upper()} connected to MQTT broker with code {rc}")
         client.subscribe(mqtt_topic_battery)
         client.subscribe(mqtt_topic_request)

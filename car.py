@@ -29,7 +29,7 @@ def sign_message(message, private_key):
     signature = sk.sign(message.encode())
     return signature.hex()
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc, properties=None):
     logger.info(f"Vehicle {userdata['vehicle_id']} connected to MQTT broker with code {rc}")
     client.subscribe(TOPICO_RESPOSTA.format(vehicle_id=userdata['vehicle_id']))
 
