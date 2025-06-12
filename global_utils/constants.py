@@ -25,17 +25,31 @@ BATTERY_CONSUMPTION = {
     "slow": 0.25
 }
 
+# --- SEÇÃO CORRIGIDA ---
+# 1. Primeiro, carregamos as chaves do arquivo JSON.
+try:
+    with open("keys.json", "r") as f:
+        KEYS = json.load(f)
+except FileNotFoundError:
+    print("ERRO FATAL: keys.json não encontrado. Execute generate_keys.py primeiro.")
+    # Em um cenário real, você poderia ter um fallback, mas para este projeto, é melhor parar.
+    exit(1)
+
+# 2. Agora, definimos COMPANY_ACCOUNTS a partir das chaves carregadas.
+COMPANY_ACCOUNTS = {c["name"]: c["address"] for c in KEYS["companies"]}
+
+# 3. Em seguida, tentamos carregar a configuração de rede para o modo distribuído.
 try:
     with open("network_config.json", "r") as f:
         NET_CONFIG = json.load(f)
     DISTRIBUTED_MODE = True
+    print("INFO: network_config.json encontrado. Operando em modo distribuído.")
 except FileNotFoundError:
     DISTRIBUTED_MODE = False
+    print("INFO: network_config.json não encontrado. Operando em modo local (simulação).")
 
-with open("keys.json", "r") as f:
-    KEYS = json.load(f)
-    COMPANY_PRIVATE_KEYS = {c["name"]: c["address"] for c in KEYS["companies"]}
 
+# 4. Finalmente, definimos os URLs dos servidores, agora que COMPANY_ACCOUNTS existe.
 if DISTRIBUTED_MODE:
     SERVERS = {
         company: {"url": url, "account": COMPANY_ACCOUNTS.get(company)}
@@ -50,38 +64,8 @@ else:
         "company_d": {"url": f"http://server_d:{SERVIDOR_D}", "account": COMPANY_ACCOUNTS["company_d"]},
         "company_e": {"url": f"http://server_e:{SERVIDOR_E}", "account": COMPANY_ACCOUNTS["company_e"]}
     }
-   
-# Contas Ethereum das empresas
-COMPANY_ACCOUNTS = COMPANY_PRIVATE_KEYS = {c["name"]: c["address"] for c in KEYS["companies"]}
+# --- FIM DA SEÇÃO CORRIGIDA ---
 
-
-SERVERS = {
-    "company_a": {
-        "url": f"http://server_a:{SERVIDOR_A}",
-        "cities": ["Salvador", "Feira de Santana"],
-        "account": COMPANY_ACCOUNTS["company_a"]
-    },
-    "company_b": {
-        "url": f"http://server_b:{SERVIDOR_B}",
-        "cities": ["Aracaju", "Itabaiana"],
-        "account": COMPANY_ACCOUNTS["company_b"]
-    },
-    "company_c": {
-        "url": f"http://server_c:{SERVIDOR_C}",
-        "cities": ["Maceió", "Arapiraca"],
-        "account": COMPANY_ACCOUNTS["company_c"]
-    },
-    "company_d": {
-        "url": f"http://server_d:{SERVIDOR_D}",
-        "cities": ["Recife", "Caruaru"],
-        "account": COMPANY_ACCOUNTS["company_d"]
-    },
-    "company_e": {
-        "url": f"http://server_e:{SERVIDOR_E}",
-        "cities": ["João Pessoa", "Campina Grande"],
-        "account": COMPANY_ACCOUNTS["company_e"]
-    }
-}
 
 servers_port = [
     {"name": "a", "port": SERVIDOR_A, "company": "company_a"},
