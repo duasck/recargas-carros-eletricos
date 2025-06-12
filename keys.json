@@ -1,0 +1,56 @@
+{
+    "companies": [
+        {
+            "name": "company_a",
+            "address": "0x39f78A06BAc5CE1d62d22b2edC8cF8316B9B66ea",
+            "private_key": "6f1a47433bd8ddcb89d5aeb642678226eeb52e886c7b6e34724f6cf4fc23a3ee"
+        },
+        {
+            "name": "company_b",
+            "address": "0x53474300d347CB563d657fD079FD9E0E9844d589",
+            "private_key": "4c983ddc023def7d0861312a72a65ccae6ee91071178de377ce620031737a1ee"
+        },
+        {
+            "name": "company_c",
+            "address": "0x49ca06e7AF748097A83af386e6837634b37457C7",
+            "private_key": "b47fb1608f396bc0974efd96a65814e239c972213651b93ba0ac061c4616a63a"
+        },
+        {
+            "name": "company_d",
+            "address": "0x189B20deE809DCB6994daEb58E9A99e190696d82",
+            "private_key": "abb6fc2b1e088401e389f8d48d77f0606574d22e7b265673f0afdca6c9489c2b"
+        },
+        {
+            "name": "company_e",
+            "address": "0xecF9e9058C42aF28548aEF77c3148Ef12d37fbD3",
+            "private_key": "c97e2e450a3507ec54a7e01de04aaafc65c981edd4cef9fd7dd3ea98c5d3d612"
+        }
+    ],
+    "vehicles": [
+        {
+            "id": "car_1",
+            "address": "0x54381268A63EB254450cAFd381e1F7b2C272D006",
+            "private_key": "00ce989829ee5234d33ad2f75ffb3a854f1cba127832d4bb6cb683028963ebad"
+        },
+        {
+            "id": "car_2",
+            "address": "0x5654a00d11936d5Eb88B3d5aACE5b2ffCeec728A",
+            "private_key": "14f67b54a2973939071c0840e8e1afe4c8416eedf8b8f29be8e1647ac3e73d7b"
+        },
+        {
+            "id": "car_3",
+            "address": "0xfb73453B1c99cF1C0Bf7618fd08bB3ddFa76aa8A",
+            "private_key": "46c1ac63010fe0e4d4b73014e95d11e393c8d455e400887c13ae4521dba8d9ec"
+        },
+        {
+            "id": "car_4",
+            "address": "0x2A61E9b3B18e16D819179172Ed9feCC4B804435A",
+            "private_key": "c3f6e118af82dded9f6e2e01c5421e371cdf8f81f6e8d28a07675931074772e9"
+        },
+        {
+            "id": "car_5",
+            "address": "0x1ef402c052f97804cA3bA0aF068eF197A7943899",
+            "private_key": "4132f4016ad3a4befd8be3459682aa712260e7dee359e677d59e4aa8ca3a52c3"
+        }
+    ]
+}

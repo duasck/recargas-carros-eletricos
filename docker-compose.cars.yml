@@ -1,0 +1,67 @@
+services:
+  car_1:
+    build:
+      context: .
+    command: python -u car.py car_1 slow
+    environment:
+    - MQTT_BROKER=mosquitto
+    - VEHICLE_ID=car1
+    - DISCHARGE_RATE=slow
+    - CONTRACT_ADDRESS=
+    - VEHICLE_PRIVATE_KEY=00ce989829ee5234d33ad2f75ffb3a854f1cba127832d4bb6cb683028963ebad
+    networks:
+    - carros_net
+    depends_on:
+      geth:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+      contract_deploy:
+        condition: service_completed_successfully
+    volumes:
+    - ./blockchain:/app/blockchain
+  car_2:
+    build:
+      context: .
+    command: python -u car.py car_2 fast
+    environment:
+    - MQTT_BROKER=mosquitto
+    - VEHICLE_ID=car2
+    - DISCHARGE_RATE=fast
+    - CONTRACT_ADDRESS=
+    - VEHICLE_PRIVATE_KEY=14f67b54a2973939071c0840e8e1afe4c8416eedf8b8f29be8e1647ac3e73d7b
+    networks:
+    - carros_net
+    depends_on:
+      geth:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+      contract_deploy:
+        condition: service_completed_successfully
+    volumes:
+    - ./blockchain:/app/blockchain
+  car_3:
+    build:
+      context: .
+    command: python -u car.py car_3 normal
+    environment:
+    - MQTT_BROKER=mosquitto
+    - VEHICLE_ID=car3
+    - DISCHARGE_RATE=normal
+    - CONTRACT_ADDRESS=
+    - VEHICLE_PRIVATE_KEY=46c1ac63010fe0e4d4b73014e95d11e393c8d455e400887c13ae4521dba8d9ec
+    networks:
+    - carros_net
+    depends_on:
+      geth:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+      contract_deploy:
+        condition: service_completed_successfully
+    volumes:
+    - ./blockchain:/app/blockchain
+networks:
+  carros_net:
+    driver: bridge
