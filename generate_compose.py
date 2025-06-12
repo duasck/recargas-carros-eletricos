@@ -145,8 +145,45 @@ if __name__ == "__main__":
             yaml.dump(compose_data, f, sort_keys=False)
         print("Arquivo gerado com sucesso.")
         
-    # Adicionar lógica para 'cars' se necessário
-
     else:
         print(f"Perfil desconhecido: '{profile}'")
         sys.exit(1)
+
+    def generate_cars_compose_distributed(num_cars):
+        """Gera o docker-compose para os carros em modo distribuído."""
+        services = {}
+        for i in range(1, num_cars + 1):
+            vehicle_id = f"car_{i}"
+            services[f"car_{i}"] = {
+                "build": {"context": "."},
+                "command": f"python -u car.py {vehicle_id} {random.choice(['fast', 'normal', 'slow'])}",
+                "environment": [
+                    # Apontando para os IPs da configuração de rede
+                    f"ETH_NODE_URL={NET_CONFIG.get('eth_node_url')}",
+                    f"MQTT_BROKER={NET_CONFIG.get('mqtt_broker')}",
+                    f"MQTT_PORT={NET_CONFIG.get('mqtt_port')}",
+                    f"VEHICLE_PRIVATE_KEY={VEHICLE_PRIVATE_KEYS.get(vehicle_id)}"
+                ],
+                "volumes": [
+                    "./blockchain:/app/blockchain" # Para ler os artefatos do contrato
+                ]
+            }
+        return {"services": services}
+
+        # Adicionar um novo `elif` para o perfil 'cars'
+        elif profile == "cars":
+            try:
+                num_cars = int(sys.argv[2])
+            except (IndexError, ValueError):
+                num_cars = 3 # Padrão de 3 carros se não for especificado
+            
+            filename = "docker-compose.cars.yml"
+            print(f"Gerando {filename} para {num_cars} carros em modo distribuído...")
+            compose_data = generate_cars_compose_distributed(num_cars)
+            with open(filename, "w") as f:
+                yaml.dump(compose_data, f, sort_keys=False)
+            print("Arquivo gerado com sucesso.")
+
+        else:
+            print(f"Perfil desconhecido: '{profile}'")
+            sys.exit(1)

@@ -1,0 +1,27 @@
+services:
+  geth:
+    build:
+      context: ./geth_custom
+    container_name: geth
+    ports:
+    - 8545:8545
+    - 30303:30303
+    command: --dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal,admin
+      --http.corsdomain=* --http.vhosts=* --allow-insecure-unlock
+    networks:
+    - lab_net
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    ports:
+    - 18833:18833
+    - 9001:9001
+    volumes:
+    - ./mosquitto/config:/mosquitto/config
+    - ./mosquitto/data:/mosquitto/data
+    - ./mosquitto/log:/mosquitto/log
+    networks:
+    - lab_net
+networks:
+  lab_net:
+    driver: bridge
