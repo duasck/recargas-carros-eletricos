@@ -119,8 +119,8 @@ python generate_compose.py 10
 car.py                      # Simulador de carro elétrico
 generate_compose.py         # Gera arquivos docker-compose
 requirements.txt            # Dependências Python
-global_utils/constants.py   # Constantes globais
-generics/generic_server.py  # Lógica genérica dos servidores
+constants.py                # Constantes globais
+generic_server.py           # Lógica genérica dos servidores
 servers/server_a.py         # Servidor A (Bahia)
 servers/server_b.py         # Servidor B (Sergipe)
 servers/server_c.py         # Servidor C (Alagoas)

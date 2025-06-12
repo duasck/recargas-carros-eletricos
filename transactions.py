@@ -16,7 +16,14 @@ w3 = Web3(Web3.HTTPProvider(ETH_NODE_URL))
 
 # Endereço do contrato e ABI
 CONTRACT_ADDRESS = os.getenv('CONTRACT_ADDRESS')
-with open('/app/blockchain/contract_abi.json', 'r') as f:
+script_dir = os.path.dirname(os.path.abspath(__file__))  # Diretório do transactions.py (raiz)
+abi_path = os.path.join(script_dir, 'blockchain', 'contract_abi.json')
+
+# Verificar se o arquivo existe antes de tentar abrir
+if not os.path.exists(abi_path):
+    raise FileNotFoundError(f"ABI file not found at {abi_path}")
+
+with open(abi_path, 'r') as f:
     CONTRACT_ABI = json.load(f)
 
 contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)

@@ -1,5 +1,39 @@
-version: '3.8'
 services:
+  geth:
+    image: ethereum/client-go
+    container_name: geth
+    ports:
+    - 8545:8545
+    - 30303:30303
+    command: --dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal,miner,txpool
+      --http.corsdomain=* --http.vhosts=* --allow-insecure-unlock
+    networks:
+    - carros_net
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --quiet
+      - --tries=1
+      - --spider
+      - http://localhost:8545
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  contract_deploy:
+    build:
+      context: .
+    command: python blockchain/deploy_contract.py
+    container_name: contract_deploy
+    networks:
+    - carros_net
+    depends_on:
+      geth:
+        condition: service_healthy
+    environment:
+    - PRIVATE_KEY=142f5185f1474cbac187d772a6db128d895de4e1aee7141249d550c944bb8ecb
+    - ETH_NODE_URL=http://geth:8545
   server_a:
     build:
       context: .
@@ -10,8 +44,12 @@ services:
     networks:
     - carros_net
     environment:
-    - CONTRACT_ADDRESS=None
-    - PRIVATE_KEY=8ee48f3ac827c9081a44ac0b1dedf9cbf2f3c97cd05106652dd78f5166f8600a
+    - CONTRACT_ADDRESS=0xDc429D726965f9790028E5628ce6d39BB070BBCc
+    - PRIVATE_KEY=564847811f5a439c429afca364edaff8c316ea3f5227f2fce4a7d344a114c6ac
+    - ETH_NODE_URL=http://geth:8545
+    depends_on:
+      contract_deploy:
+        condition: service_completed_successfully
   server_b:
     build:
       context: .
@@ -22,8 +60,12 @@ services:
     networks:
     - carros_net
     environment:
-    - CONTRACT_ADDRESS=None
-    - PRIVATE_KEY=00443c2aaed0dce9a148831dc4862d925d031d95c1a67422facda3fd75014e84
+    - CONTRACT_ADDRESS=0x6E87D8adcAB4ad899001333Dc5238b612f24e178
+    - PRIVATE_KEY=8c2a27ca990041e153d2a00e7ac54ea17579167aad94dd749581ca3262e3db6e
+    - ETH_NODE_URL=http://geth:8545
+    depends_on:
+      contract_deploy:
+        condition: service_completed_successfully
   server_c:
     build:
       context: .
@@ -34,8 +76,12 @@ services:
     networks:
     - carros_net
     environment:
-    - CONTRACT_ADDRESS=None
-    - PRIVATE_KEY=d96bd0128650f51e3771875c316f3a9746b97eceeb4837beb8fb071988ec7d91
+    - CONTRACT_ADDRESS=0x5069aC274d2Fd8940463299b9e737daEbB4C2C90
+    - PRIVATE_KEY=e0a4cb5b3145524fc18cd776e91526120d6b070d30fa07e41768ea312657dbd6
+    - ETH_NODE_URL=http://geth:8545
+    depends_on:
+      contract_deploy:
+        condition: service_completed_successfully
   server_d:
     build:
       context: .
@@ -46,8 +92,12 @@ services:
     networks:
     - carros_net
     environment:
-    - CONTRACT_ADDRESS=None
-    - PRIVATE_KEY=8e891f39c68403bb12855b0566e9bde5f096d9c82e17766903f2d74007a01f13
+    - CONTRACT_ADDRESS=0xd536f138f3968e9257AF7258e15e82579a043fA2
+    - PRIVATE_KEY=3d93a3778ec083ae33a5449da2f67ed7f554cb00d1ca4658dd12ce733106a2ca
+    - ETH_NODE_URL=http://geth:8545
+    depends_on:
+      contract_deploy:
+        condition: service_completed_successfully
   server_e:
     build:
       context: .
@@ -58,52 +108,27 @@ services:
     networks:
     - carros_net
     environment:
-    - CONTRACT_ADDRESS=None
-    - PRIVATE_KEY=730e26b3fca5c4f6e2f7d6349f2ec952d613abc4902b54dd89a29355351ed319
-  geth:
-    image: ethereum/client-go
-    container_name: geth
-    ports:
-    - 8545:8545
-    - 30303:30303
-    command: --dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal --http.corsdomain=*
-      --http.vhosts=*
-    networks:
-    - carros_net
-  mosquitto:
-    image: eclipse-mosquitto
-    container_name: mosquitto
-    ports:
-    - 18833:18833
-    - 9001:9001
-    volumes:
-    - ./mosquitto/config:/mosquitto/config
-    - ./mosquitto/data:/mosquitto/data
-    - ./mosquitto/log:/mosquitto/log
-    networks:
-    - carros_net
-  contract_deploy:
-    build:
-      context: .
-    command: python blockchain/deploy_contract.py
-    container_name: contract_deploy
-    networks:
-    - carros_net
+    - CONTRACT_ADDRESS=0x7F94aC738b21fbA8391637a82115B28A118228dC
+    - PRIVATE_KEY=bbbe1f1738337f73cdf7d51948acf11af7b78ad63c391f9b7441d9abed10ac27
+    - ETH_NODE_URL=http://geth:8545
     depends_on:
-    - geth
+      contract_deploy:
+        condition: service_completed_successfully
   transactions_api:
     build:
       context: .
-    command: python api/transactions.py
+    command: python transactions.py
     container_name: transactions_api
     ports:
     - 5100:5100
     networks:
     - carros_net
+    depends_on:
+      contract_deploy:
+        condition: service_completed_successfully
     environment:
     - CONTRACT_ADDRESS=None
-    depends_on:
-    - geth
+    - ETH_NODE_URL=http://geth:8545
 networks:
   carros_net:
     driver: bridge

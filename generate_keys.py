@@ -1,11 +1,9 @@
 from eth_account import Account
 import json
 
-# Habilita geração de chaves não seguras para desenvolvimento
 Account.enable_unaudited_hdwallet_features()
 
 def generate_keypair():
-    # Gera uma nova conta
     account = Account.create()
     return {
         "address": account.address,
@@ -15,17 +13,16 @@ def generate_keypair():
 def generate_keys(num_companies=5, num_vehicles=5):
     keys = {
         "companies": [],
-        "vehicles": []
+        "vehicles": [],
+        "deployer": generate_keypair()  # Chave para implantar o contrato
     }
-    # Gera chaves para empresas
     for i in range(num_companies):
         keypair = generate_keypair()
         keys["companies"].append({
-            "name": f"company_{chr(97 + i)}",  # company_a, company_b, etc.
+            "name": f"company_{chr(97 + i)}",
             "address": keypair["address"],
             "private_key": keypair["private_key"]
         })
-    # Gera chaves para veículos
     for i in range(num_vehicles):
         keypair = generate_keypair()
         keys["vehicles"].append({
@@ -33,7 +30,6 @@ def generate_keys(num_companies=5, num_vehicles=5):
             "address": keypair["address"],
             "private_key": keypair["private_key"]
         })
-    # Salva em um arquivo JSON
     with open("keys.json", "w") as f:
         json.dump(keys, f, indent=4)
     return keys

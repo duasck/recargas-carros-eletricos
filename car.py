@@ -7,7 +7,7 @@ import logging
 import sys
 import threading
 import networkx as nx
-import global_utils.constants as constants
+import constants
 import requests
 from ecdsa import SigningKey, SECP256k1
 from hashlib import sha256
@@ -116,7 +116,8 @@ def simulate_vehicle(vehicle_id, discharge_rate):
         "public_key": public_key
     }
 
-    client = mqtt.Client(userdata=userdata)
+    # client = mqtt.Client(userdata=userdata)
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, userdata=userdata)
     client.on_connect = on_connect
     client.on_message = on_message
 

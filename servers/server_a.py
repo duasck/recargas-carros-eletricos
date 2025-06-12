@@ -1,5 +1,11 @@
-import global_utils.constants as constants
-from generics.generic_server import create_server
+import sys
+import os
+
+# Adiciona o diretório raiz ao path para acessar os arquivos da raiz
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import constants
+from generic_server import create_server
 
 server_config = {
     "company": "company_a",

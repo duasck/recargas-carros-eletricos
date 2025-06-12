@@ -5,7 +5,7 @@ import requests
 import networkx as nx
 import logging
 import threading
-import global_utils.constants as constants
+import constants
 import os
 from ecdsa import SigningKey, SECP256k1
 from hashlib import sha256
@@ -113,7 +113,7 @@ def create_server(server_config):
 
         if registrar_transacao:
             try:
-                tx_hash = registrar_transacao('recarga', {'vehicle_id': vehicle_id, 'action': action, 'status': 'INICIO'}, vehicle_id, company_account)
+                tx_hash = registrar_transacao('recarga', {'vehicle_id': vehicle_id, 'action': action, 'status': 'INICIO'}, company_account, company_account)
                 logger.info(f'Transação blockchain registrada: tipo=recarga, dados={{"vehicle_id": "{vehicle_id}", "action": "{action}", "status": "INICIO"}}, tx_hash={tx_hash}')
             except Exception as e:
                 logger.warning(f'Erro ao registrar recarga no blockchain: {e}')
@@ -158,7 +158,8 @@ def create_server(server_config):
         except Exception as e:
             logger.error(f"Error processing MQTT message: {e}")
 
-    mqtt_client = mqtt.Client()
+    # mqtt_client = mqtt.Client()
+    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
     mqtt_client.connect(mqtt_broker, mqtt_port, 60)
@@ -197,7 +198,7 @@ def create_server(server_config):
                         logger.info(f"Server {server_name.upper()}: Prepared reservation for {vehicle_id} at {point_id}")
                         if registrar_transacao:
                             try:
-                                tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'PREPARE'}, vehicle_id, company_account)
+                                tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'PREPARE'}, company_account, company_account)
                                 logger.info(f'Transação blockchain registrada: tipo=reserva, dados={{"point_id": "{point_id}", "vehicle_id": "{vehicle_id}", "status": "PREPARE"}}, tx_hash={tx_hash}')
                             except Exception as e:
                                 logger.warning(f'Erro ao registrar no blockchain: {e}')
@@ -235,12 +236,11 @@ def create_server(server_config):
                     logger.info(f'{server_name.upper()}: Committed reservation for {vehicle_id} in {point_id}')
                     if registrar_transacao:
                         try:
-                            tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'COMMIT'}, vehicle_id, company_account)
+                            tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'COMMIT'}, company_account, company_account)
                             logger.info(f'Transação blockchain registrada: tipo=reserva, dados={{"point_id": "{point_id}", "vehicle_id": "{vehicle_id}", "status": "COMMIT"}}, tx_hash={tx_hash}')
                         except Exception as e:
                             logger.warning(f'Erro ao registrar no blockchain: {e}')
                     return jsonify({'status': 'COMMITTED'})
-            return jsonify({'status': 'ABORTED'})
 
     @app.route('/api/abort', methods=['POST'])
     def abort_reservation():
@@ -277,12 +277,11 @@ def create_server(server_config):
                             logger.info(f"Server {server_name.upper()}: Notified next vehicle {next_vehicle} for point {point_id}")
                     if registrar_transacao:
                         try:
-                            tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'ABORT'}, vehicle_id, company_account)
+                            tx_hash = registrar_transacao('reserva', {'point_id': point_id, 'vehicle_id': vehicle_id, 'status': 'ABORT'}, company_account, company_account)
                             logger.info(f'Transação blockchain registrada: tipo=reserva, dados={{"point_id": "{point_id}", "vehicle_id": "{vehicle_id}", "status": "ABORT"}}, tx_hash={tx_hash}')
                         except Exception as e:
                             logger.warning(f'Erro ao registrar no blockchain: {e}')
                     return jsonify({"status": "ABORTED"})
-            return jsonify({"status": "ABORTED"})
 
     @app.route('/api/queue_status/<point_id>', methods=['GET'])
     def queue_status(point_id):
@@ -326,8 +325,8 @@ def create_server(server_config):
             tx_hash = registrar_transacao(
                 'pagamento',
                 {'vehicle_id': vehicle_id, 'amount': amount_wei, 'status': 'COMPLETED'},
-                vehicle_id,
-                company_account,
+                company_account, # A empresa registra a transação
+                company_account, # O valor vai para a empresa (se o contrato transferir)
                 amount_wei
             )
             logger.info(f"Payment processed for {vehicle_id}: {amount_wei} wei, tx_hash={tx_hash}")
