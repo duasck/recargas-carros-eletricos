@@ -11,6 +11,7 @@ services:
     environment:
     - CONTRACT_ADDRESS=
     - PRIVATE_KEY=6f1a47433bd8ddcb89d5aeb642678226eeb52e886c7b6e34724f6cf4fc23a3ee
+    - MQTT_BROKER=mosquitto
     depends_on:
       geth:
         condition: service_healthy
@@ -32,6 +33,7 @@ services:
     environment:
     - CONTRACT_ADDRESS=
     - PRIVATE_KEY=4c983ddc023def7d0861312a72a65ccae6ee91071178de377ce620031737a1ee
+    - MQTT_BROKER=mosquitto
     depends_on:
       geth:
         condition: service_healthy
@@ -53,6 +55,7 @@ services:
     environment:
     - CONTRACT_ADDRESS=
     - PRIVATE_KEY=b47fb1608f396bc0974efd96a65814e239c972213651b93ba0ac061c4616a63a
+    - MQTT_BROKER=mosquitto
     depends_on:
       geth:
         condition: service_healthy
@@ -74,6 +77,7 @@ services:
     environment:
     - CONTRACT_ADDRESS=
     - PRIVATE_KEY=abb6fc2b1e088401e389f8d48d77f0606574d22e7b265673f0afdca6c9489c2b
+    - MQTT_BROKER=mosquitto
     depends_on:
       geth:
         condition: service_healthy
@@ -95,6 +99,7 @@ services:
     environment:
     - CONTRACT_ADDRESS=
     - PRIVATE_KEY=c97e2e450a3507ec54a7e01de04aaafc65c981edd4cef9fd7dd3ea98c5d3d612
+    - MQTT_BROKER=mosquitto
     depends_on:
       geth:
         condition: service_healthy
@@ -161,7 +166,7 @@ services:
   transactions_api:
     build:
       context: .
-    command: python api/transactions.py
+    command: python transactions.py
     container_name: transactions_api
     ports:
     - 5100:5100

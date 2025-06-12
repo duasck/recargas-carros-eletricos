@@ -97,12 +97,18 @@ def process_payment(vehicle_id, company, amount_wei, private_key, public_key):
         return False
 
 def simulate_vehicle(vehicle_id, discharge_rate):
+
+    initial_delay = random.uniform(2, 7)
+    logger.info(f"{vehicle_id} waiting for {initial_delay:.2f} seconds before starting...")
+    time.sleep(initial_delay)
+
     all_cities = list(CITY_STATE_MAP.keys())
     start_city = random.choice(all_cities)
     end_city = random.choice([c for c in all_cities if c != start_city])
 
     private_key = os.getenv("VEHICLE_PRIVATE_KEY", SigningKey.generate(curve=SECP256k1).to_string().hex())
-    public_key = SigningKey.from_string(bytes.fromhex(private_key), curve=SECP256k1).verifying_key.to_string().hex()
+    sk = SigningKey.from_string(bytes.fromhex(private_key), curve=SECP256k1)
+    public_key = sk.verifying_key.to_string("uncompressed").hex()
 
     userdata = {
         "vehicle_id": vehicle_id,

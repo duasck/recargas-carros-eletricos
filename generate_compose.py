@@ -6,7 +6,7 @@ import json
 import global_utils.constants as CONST
 import random
 
-DEFAULT_NUM_CARS = 5
+DEFAULT_NUM_CARS = 3
 
 # Carregar chaves do keys.json, se disponível
 try:
@@ -52,8 +52,6 @@ def generate_servers_compose(servers_port):
         },
         "container_name": "geth",
         "ports": ["8545:8545", "30303:30303"],
-        # --- CORREÇÃO AQUI ---
-        # Removendo o prefixo "http." da flag, o nome correto é --allow-insecure-unlock
         "command": "--dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal,admin --http.corsdomain=* --http.vhosts=* --allow-insecure-unlock",
         "networks": ["carros_net"],
         "healthcheck": {
@@ -117,6 +115,13 @@ def generate_servers_compose(servers_port):
             "./blockchain:/app/blockchain"
         ]
     }
+    
+    compose = {
+        "services": services,
+        "networks": {
+            "carros_net": {"driver": "bridge"}
+        }
+    }
     return compose
 
 def generate_cars_compose(num_cars, mqtt_broker):
@@ -145,6 +150,7 @@ def generate_cars_compose(num_cars, mqtt_broker):
                 "./blockchain:/app/blockchain"
             ]
         }
+    
     compose = {
         "services": services,
         "networks": {

@@ -2,11 +2,11 @@ services:
   car_1:
     build:
       context: .
-    command: python -u car.py car_1 fast
+    command: python -u car.py car_1 slow
     environment:
     - MQTT_BROKER=mosquitto
     - VEHICLE_ID=car1
-    - DISCHARGE_RATE=fast
+    - DISCHARGE_RATE=slow
     - CONTRACT_ADDRESS=
     - VEHICLE_PRIVATE_KEY=00ce989829ee5234d33ad2f75ffb3a854f1cba127832d4bb6cb683028963ebad
     networks:
@@ -44,55 +44,13 @@ services:
   car_3:
     build:
       context: .
-    command: python -u car.py car_3 slow
+    command: python -u car.py car_3 normal
     environment:
     - MQTT_BROKER=mosquitto
     - VEHICLE_ID=car3
-    - DISCHARGE_RATE=slow
-    - CONTRACT_ADDRESS=
-    - VEHICLE_PRIVATE_KEY=46c1ac63010fe0e4d4b73014e95d11e393c8d455e400887c13ae4521dba8d9ec
-    networks:
-    - carros_net
-    depends_on:
-      geth:
-        condition: service_healthy
-      mosquitto:
-        condition: service_healthy
-      contract_deploy:
-        condition: service_completed_successfully
-    volumes:
-    - ./blockchain:/app/blockchain
-  car_4:
-    build:
-      context: .
-    command: python -u car.py car_4 normal
-    environment:
-    - MQTT_BROKER=mosquitto
-    - VEHICLE_ID=car4
     - DISCHARGE_RATE=normal
     - CONTRACT_ADDRESS=
-    - VEHICLE_PRIVATE_KEY=c3f6e118af82dded9f6e2e01c5421e371cdf8f81f6e8d28a07675931074772e9
-    networks:
-    - carros_net
-    depends_on:
-      geth:
-        condition: service_healthy
-      mosquitto:
-        condition: service_healthy
-      contract_deploy:
-        condition: service_completed_successfully
-    volumes:
-    - ./blockchain:/app/blockchain
-  car_5:
-    build:
-      context: .
-    command: python -u car.py car_5 fast
-    environment:
-    - MQTT_BROKER=mosquitto
-    - VEHICLE_ID=car5
-    - DISCHARGE_RATE=fast
-    - CONTRACT_ADDRESS=
-    - VEHICLE_PRIVATE_KEY=4132f4016ad3a4befd8be3459682aa712260e7dee359e677d59e4aa8ca3a52c3
+    - VEHICLE_PRIVATE_KEY=46c1ac63010fe0e4d4b73014e95d11e393c8d455e400887c13ae4521dba8d9ec
     networks:
     - carros_net
     depends_on:

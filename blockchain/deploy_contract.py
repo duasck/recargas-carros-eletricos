@@ -18,75 +18,78 @@ for _ in range(30):
 else:
     raise ConnectionError("Falha ao conectar ao geth")
 
-# Obter conta do keys.json ou usar uma padrão
-private_key = os.getenv('PRIVATE_KEY')
-if not private_key:
+# Obter a conta que vai fazer o deploy
+deployer_private_key = os.getenv('PRIVATE_KEY')
+if not deployer_private_key:
     raise ValueError("PRIVATE_KEY não definida no ambiente")
-account = w3.eth.account.from_key(private_key)
-print(f"Usando conta: {account.address}")
+deployer_account = w3.eth.account.from_key(deployer_private_key)
+print(f"Usando conta do deployer: {deployer_account.address}")
 
 
-# --- LÓGICA DE FINANCIAMENTO DA CONTA ---
+# --- LÓGICA DE FINANCIAMENTO DAS CONTAS ---
+print("Iniciando processo de financiamento...")
+try:
+    with open("keys.json", "r") as f:
+        KEYS = json.load(f)
+    
+    # Obter a conta rica do Geth
+    coinbase_raw = w3.manager.request_blocking("eth_coinbase", [])
+    coinbase = w3.to_checksum_address(coinbase_raw)
+    print(f"Conta coinbase (fonte dos fundos) encontrada: {coinbase}")
 
-# Verificar se a conta tem fundos. Se não, transferir da conta coinbase do nó de dev.
-balance = w3.eth.get_balance(account.address)
-print(f"Saldo atual da conta: {w3.from_wei(balance, 'ether')} ETH")
+    # Desbloquear a conta coinbase
+    print("Desbloqueando a conta coinbase...")
+    w3.manager.request_blocking("personal_unlockAccount", [coinbase, "", 300]) # Aumentar tempo de desbloqueio
+    print("Conta coinbase desbloqueada.")
 
-if balance < w3.to_wei(1, 'ether'): # Se o saldo for menor que 1 ETH, financia
-    print("Conta com fundos insuficientes. Tentando financiar a partir da conta coinbase do Geth...")
-    try:
-        # A conta coinbase é a conta pré-financiada no modo --dev
-        coinbase_raw = w3.manager.request_blocking("eth_coinbase", [])
-        if not coinbase_raw:
-            raise ValueError("Não foi possível encontrar a conta coinbase no nó Geth.")
+    # Loop para financiar todas as empresas
+    for company in KEYS["companies"]:
+        company_address = w3.to_checksum_address(company["address"])
+        balance = w3.eth.get_balance(company_address)
         
-        # --- CORREÇÃO AQUI: Converter para formato Checksum ---
-        coinbase = w3.to_checksum_address(coinbase_raw)
-        deployer_address = w3.to_checksum_address(account.address)
-        # ---------------------------------------------------
+        print(f"Verificando saldo de {company['name']} ({company_address}). Saldo atual: {w3.from_wei(balance, 'ether')} ETH")
 
-        print(f"Conta coinbase encontrada: {coinbase}")
+        if balance < w3.to_wei(10, 'ether'): # Se tiver menos de 10 ETH, financia
+            amount_to_send = w3.to_wei(50, 'ether') # Envia 50 ETH
+            print(f"Financiando {company['name']}...")
+            tx_hash = w3.eth.send_transaction({
+                'from': coinbase,
+                'to': company_address,
+                'value': amount_to_send
+            })
+            w3.eth.wait_for_transaction_receipt(tx_hash)
+            new_balance = w3.eth.get_balance(company_address)
+            print(f"Financiamento de {company['name']} concluído! Novo saldo: {w3.from_wei(new_balance, 'ether')} ETH")
+        else:
+            print(f"{company['name']} já tem fundos suficientes.")
 
-        # Desbloquear a conta coinbase para poder enviar a transação
-        print("Desbloqueando a conta coinbase...")
-        w3.manager.request_blocking("personal_unlockAccount", [coinbase, "", 30])
-        print("Conta coinbase desbloqueada.")
+    # --- (Opcional) Financiar os carros também! ---
+    # Isso será útil se no futuro os carros precisarem pagar gás.
+    for vehicle in KEYS["vehicles"]:
+        vehicle_address = w3.to_checksum_address(vehicle["address"])
+        balance = w3.eth.get_balance(vehicle_address)
+        if balance < w3.to_wei(10, 'ether'):
+            amount_to_send = w3.to_wei(20, 'ether')
+            print(f"Financiando {vehicle['id']}...")
+            tx_hash = w3.eth.send_transaction({'from': coinbase, 'to': vehicle_address, 'value': amount_to_send})
+            w3.eth.wait_for_transaction_receipt(tx_hash)
+            print(f"Financiamento de {vehicle['id']} concluído.")
 
-        # Quantidade de Ether para transferir (ex: 100 Ether)
-        amount_to_send = w3.to_wei(100, 'ether')
-
-        tx_hash_fund = w3.eth.send_transaction({
-            'from': coinbase,
-            'to': deployer_address, # Usar o endereço com checksum
-            'value': amount_to_send
-        })
-
-        print(f"Enviando {w3.from_wei(amount_to_send, 'ether')} ETH para a conta {deployer_address}...")
-        receipt_fund = w3.eth.wait_for_transaction_receipt(tx_hash_fund)
-
-        new_balance = w3.eth.get_balance(deployer_address)
-        print(f"Transação de financiamento concluída! Novo saldo: {w3.from_wei(new_balance, 'ether')} ETH")
-
-    except Exception as e:
-        print(f"Erro ao tentar financiar a conta: {e}")
-        if "the method personal_unlockAccount does not exist" in str(e) or "personal" in str(e):
-             print("\nAVISO: A API 'personal' pode não estar habilitada no Geth.")
-             print("Verifique se o comando do Geth no docker-compose inclui '--http.api eth,net,web3,personal,admin'")
-        raise
+except Exception as e:
+    print(f"Erro durante o processo de financiamento: {e}")
+    raise
 
 # --- FIM DA LÓGICA DE FINANCIAMENTO ---
 
+# O resto do script continua igual para o deploy do contrato
+print("\nIniciando deploy do Smart Contract...")
 
 solcx.install_solc('0.8.0')
 solcx.set_solc_version('0.8.0')
 
 print("Lendo contract.sol...")
-try:
-    with open('/app/blockchain/contract.sol', 'r') as f:
-        contract_source = f.read()
-except FileNotFoundError as e:
-    print(f"Erro: {e}")
-    raise
+with open('/app/blockchain/contract.sol', 'r') as f:
+    contract_source = f.read()
 
 print("Compilando contrato...")
 compiled = solcx.compile_source(contract_source, output_values=['abi', 'bin'])
@@ -94,27 +97,25 @@ contract_id, contract_interface = compiled.popitem()
 abi = contract_interface['abi']
 bytecode = contract_interface['bin']
 
-
 gas_price = w3.eth.gas_price
 print(f"Usando preço do gás sugerido pelo nó: {gas_price} wei")
 
 print("Construindo transação...")
 contract = w3.eth.contract(abi=abi, bytecode=bytecode)
 tx = contract.constructor().build_transaction({
-    'from': account.address,
-    'nonce': w3.eth.get_transaction_count(account.address),
+    'from': deployer_account.address,
+    'nonce': w3.eth.get_transaction_count(deployer_account.address),
     'gas': 2000000,
     'gasPrice': gas_price
 })
 
 print("Assinando transação...")
-signed_tx = w3.eth.account.sign_transaction(tx, private_key)
+signed_tx = w3.eth.account.sign_transaction(tx, deployer_private_key)
 print("Enviando transação...")
 tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-print(f"Hash da transação: {tx_hash.hex()}")
+print(f"Hash da transação do deploy: {tx_hash.hex()}")
 receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
-# Salvar ABI e endereço
 os.makedirs('/app/blockchain', exist_ok=True)
 print("Salvando contract_abi.json...")
 with open('/app/blockchain/contract_abi.json', 'w') as f:
