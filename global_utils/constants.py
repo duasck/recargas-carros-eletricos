@@ -1,4 +1,6 @@
 import json
+import os
+
 PORT_BASE = 5000
 SERVIDOR_A = PORT_BASE
 SERVIDOR_B = PORT_BASE + 1
@@ -23,12 +25,31 @@ BATTERY_CONSUMPTION = {
     "slow": 0.25
 }
 
+try:
+    with open("network_config.json", "r") as f:
+        NET_CONFIG = json.load(f)
+    DISTRIBUTED_MODE = True
+except FileNotFoundError:
+    DISTRIBUTED_MODE = False
 
 with open("keys.json", "r") as f:
     KEYS = json.load(f)
     COMPANY_PRIVATE_KEYS = {c["name"]: c["address"] for c in KEYS["companies"]}
 
-
+if DISTRIBUTED_MODE:
+    SERVERS = {
+        company: {"url": url, "account": COMPANY_ACCOUNTS.get(company)}
+        for company, url in NET_CONFIG["servers"].items()
+    }
+else:
+    # Modo local padrão
+    SERVERS = {
+        "company_a": {"url": f"http://server_a:{SERVIDOR_A}", "account": COMPANY_ACCOUNTS["company_a"]},
+        "company_b": {"url": f"http://server_b:{SERVIDOR_B}", "account": COMPANY_ACCOUNTS["company_b"]},
+        "company_c": {"url": f"http://server_c:{SERVIDOR_C}", "account": COMPANY_ACCOUNTS["company_c"]},
+        "company_d": {"url": f"http://server_d:{SERVIDOR_D}", "account": COMPANY_ACCOUNTS["company_d"]},
+        "company_e": {"url": f"http://server_e:{SERVIDOR_E}", "account": COMPANY_ACCOUNTS["company_e"]}
+    }
    
 # Contas Ethereum das empresas
 COMPANY_ACCOUNTS = COMPANY_PRIVATE_KEYS = {c["name"]: c["address"] for c in KEYS["companies"]}
