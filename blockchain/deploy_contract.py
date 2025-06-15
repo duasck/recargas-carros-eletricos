@@ -7,7 +7,7 @@ import time
 ETH_NODE_URL = os.getenv('ETH_NODE_URL', 'http://geth:8545')
 w3 = Web3(Web3.HTTPProvider(ETH_NODE_URL))
 
-# Aguardar geth estar pronto
+# Aguarda geth estar pronto
 print("Conectando ao geth...")
 for _ in range(30):
     if w3.is_connected():
@@ -18,7 +18,7 @@ for _ in range(30):
 else:
     raise ConnectionError("Falha ao conectar ao geth")
 
-# Obter a conta que vai fazer o deploy
+# Obtem a conta que vai fazer o deploy
 deployer_private_key = os.getenv('PRIVATE_KEY')
 if not deployer_private_key:
     raise ValueError("PRIVATE_KEY não definida no ambiente")
@@ -26,18 +26,18 @@ deployer_account = w3.eth.account.from_key(deployer_private_key)
 print(f"Usando conta do deployer: {deployer_account.address}")
 
 
-# --- LÓGICA DE FINANCIAMENTO DAS CONTAS ---
+# LÓGICA DE FINANCIAMENTO DAS CONTAS
 print("Iniciando processo de financiamento...")
 try:
     with open("keys.json", "r") as f:
         KEYS = json.load(f)
     
-    # Obter a conta rica do Geth
+    # Obtem a conta rica do Geth
     coinbase_raw = w3.manager.request_blocking("eth_coinbase", [])
     coinbase = w3.to_checksum_address(coinbase_raw)
     print(f"Conta coinbase (fonte dos fundos) encontrada: {coinbase}")
 
-    # Desbloquear a conta coinbase
+    # Desbloqueia a conta coinbase
     print("Desbloqueando a conta coinbase...")
     w3.manager.request_blocking("personal_unlockAccount", [coinbase, "", 300]) # Aumentar tempo de desbloqueio
     print("Conta coinbase desbloqueada.")
@@ -63,8 +63,6 @@ try:
         else:
             print(f"{company['name']} já tem fundos suficientes.")
 
-    # --- (Opcional) Financiar os carros também! ---
-    # Isso será útil se no futuro os carros precisarem pagar gás.
     for vehicle in KEYS["vehicles"]:
         vehicle_address = w3.to_checksum_address(vehicle["address"])
         balance = w3.eth.get_balance(vehicle_address)
@@ -79,9 +77,6 @@ except Exception as e:
     print(f"Erro durante o processo de financiamento: {e}")
     raise
 
-# --- FIM DA LÓGICA DE FINANCIAMENTO ---
-
-# O resto do script continua igual para o deploy do contrato
 print("\nIniciando deploy do Smart Contract...")
 
 solcx.install_solc('0.8.0')

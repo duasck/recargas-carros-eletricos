@@ -6,7 +6,7 @@ import json
 import global_utils.constants as CONST
 import random
 
-# --- CARREGAR CONFIGURAÇÕES ---
+# carrega as configurações
 try:
     with open("keys.json", "r") as f:
         KEYS = json.load(f)
@@ -26,8 +26,7 @@ except FileNotFoundError:
     print("INFO: network_config.json não encontrado. Certifique-se de criá-lo para o modo de laboratório.")
 
 
-# --- FUNÇÕES GERADORAS ---
-
+# funções geradoras
 def generate_infra_compose():
     """Gera o docker-compose para os serviços de infraestrutura (geth, mosquitto, api)."""
     services = {}
@@ -89,7 +88,6 @@ def generate_server_compose(server_name_short):
     company_full_name = server_info["company"]
     services = {}
 
-    # O primeiro servidor (e apenas ele) é responsável por implantar o contrato
     if company_full_name == 'company_a':
         services["contract_deploy"] = {
             "build": {"context": "."},
@@ -142,8 +140,6 @@ def generate_cars_compose_distributed(num_cars):
     return {"services": services}
 
 
-# --- LÓGICA PRINCIPAL DO SCRIPT ---
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Uso: ./generate_compose.py <perfil> [opções]")
@@ -175,7 +171,7 @@ if __name__ == "__main__":
         try:
             num_cars = int(sys.argv[2])
         except (IndexError, ValueError):
-            num_cars = 3 # Padrão de 3 carros se não for especificado
+            num_cars = 3 
         
         filename = "docker-compose.cars.yml"
         print(f"Gerando {filename} para {num_cars} carros em modo distribuído...")

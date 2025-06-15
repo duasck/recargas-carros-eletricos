@@ -25,20 +25,18 @@ BATTERY_CONSUMPTION = {
     "slow": 0.25
 }
 
-# --- SEÇÃO CORRIGIDA ---
-# 1. Primeiro, carregamos as chaves do arquivo JSON.
+# carrega as chaves do arquivo JSON.
 try:
     with open("keys.json", "r") as f:
         KEYS = json.load(f)
 except FileNotFoundError:
     print("ERRO FATAL: keys.json não encontrado. Execute generate_keys.py primeiro.")
-    # Em um cenário real, você poderia ter um fallback, mas para este projeto, é melhor parar.
     exit(1)
 
-# 2. Agora, definimos COMPANY_ACCOUNTS a partir das chaves carregadas.
+# define COMPANY_ACCOUNTS a partir das chaves carregadas.
 COMPANY_ACCOUNTS = {c["name"]: c["address"] for c in KEYS["companies"]}
 
-# 3. Em seguida, tentamos carregar a configuração de rede para o modo distribuído.
+# tenta carregar a configuração de rede para o modo distribuído.
 try:
     with open("network_config.json", "r") as f:
         NET_CONFIG = json.load(f)
@@ -49,7 +47,7 @@ except FileNotFoundError:
     print("INFO: network_config.json não encontrado. Operando em modo local (simulação).")
 
 
-# 4. Finalmente, definimos os URLs dos servidores, agora que COMPANY_ACCOUNTS existe.
+# define os URLs dos servidores
 if DISTRIBUTED_MODE:
     SERVERS = {
         company: {"url": url, "account": COMPANY_ACCOUNTS.get(company)}
@@ -64,8 +62,6 @@ else:
         "company_d": {"url": f"http://server_d:{SERVIDOR_D}", "account": COMPANY_ACCOUNTS["company_d"]},
         "company_e": {"url": f"http://server_e:{SERVIDOR_E}", "account": COMPANY_ACCOUNTS["company_e"]}
     }
-# --- FIM DA SEÇÃO CORRIGIDA ---
-
 
 servers_port = [
     {"name": "a", "port": SERVIDOR_A, "company": "company_a"},

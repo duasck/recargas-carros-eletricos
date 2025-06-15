@@ -9,10 +9,9 @@ import global_utils.constants as constants
 import os
 from ecdsa import SigningKey, VerifyingKey, SECP256k1
 from hashlib import sha256
-from web3 import Web3 # Adicionado para criar o objeto da conta
+from web3 import Web3 
 
 try:
-    # Importando a função corrigida do ledger
     from blockchain.ledger import record_transaction
 except ImportError:
     record_transaction = None
@@ -39,7 +38,6 @@ def create_server(server_config):
     G.add_nodes_from(constants.CITYS_NODES)
     G.add_edges_from(constants.CITYS_WEIGHT)
 
-    # CORREÇÃO: Usar o nome do serviço Docker "mosquitto"
     mqtt_broker = os.getenv("MQTT_BROKER", "mosquitto")
     mqtt_port = constants.PORTA_MQTT
     mqtt_topic_battery = constants.TOPICO_BATERIA.format(server=f"server_{server_name}")
@@ -47,10 +45,8 @@ def create_server(server_config):
 
     def verify_signature(message, signature, public_key):
         try:
-            # ECDSA espera a chave pública em formato de bytes, não hex
             vk = VerifyingKey.from_string(bytes.fromhex(public_key), curve=SECP256k1)
             
-            # Agora verificamos a assinatura com a chave de verificação.
             return vk.verify(bytes.fromhex(signature), message.encode())
         except Exception as e:
             logger.error(f"Signature verification failed: {e}")
@@ -158,8 +154,6 @@ def create_server(server_config):
         logger.info(f'{server_name.upper()}: returning charging points')
         return jsonify({company_name: charging_points})
 
-    # --- ENDPOINTS COM VERIFICAÇÃO DE ASSINATURA CORRIGIDA ---
-
     @app.route('/api/prepare', methods=['POST'])
     def prepare_reservation():
         data = request.json
@@ -240,7 +234,6 @@ def create_server(server_config):
                     return jsonify({"status": "ABORTED"})
             return jsonify({"status": "ABORTED", "error": "Point not found"})
     
-    # --- ENDPOINT DE PAGAMENTO CORRIGIDO ---
     @app.route('/api/payment', methods=['POST'])
     def process_payment():
         data = request.json
