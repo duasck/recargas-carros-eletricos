@@ -1,12 +1,12 @@
 {
-    "eth_node_url": "http://172.16.201.11:8545",
-    "mqtt_broker": "172.16.201.11",
+    "eth_node_url": "http://172.16.201.8:8545",
+    "mqtt_broker": "172.16.201.8",
     "mqtt_port": 18833,
     "servers": {
-        "company_a": "http://172.16.201.10:5000",
-        "company_b": "http://172.16.201.10:5001",
-        "company_c": "http://172.16.201.11:5002",
-        "company_d": "http://172.16.201.11:5003",
-        "company_e": "http://172.16.201.11:5004"
+        "company_a": "http://172.16.201.5:5000",
+        "company_b": "http://172.16.201.5:5001",
+        "company_c": "http://172.16.201.8:5002",
+        "company_d": "http://172.16.201.8:5003",
+        "company_e": "http://172.16.201.8:5004"
     }
 }
