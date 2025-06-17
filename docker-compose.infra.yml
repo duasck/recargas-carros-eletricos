@@ -1,0 +1,57 @@
+services:
+  geth:
+    build:
+      context: ./geth_custom
+    container_name: geth
+    ports:
+    - 8545:8545
+    - 30303:30303
+    command: --dev --http --http.addr 0.0.0.0 --http.api eth,net,web3,personal,admin
+      --http.corsdomain=* --http.vhosts=* --allow-insecure-unlock
+    networks:
+    - lab_net
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - nc -z localhost 8545 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    ports:
+    - 18833:18833
+    - 9001:9001
+    volumes:
+    - ./mosquitto/config:/mosquitto/config
+    - ./mosquitto/data:/mosquitto/data
+    - ./mosquitto/log:/mosquitto/log
+    networks:
+    - lab_net
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - nc -z localhost 18833 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  transactions_api:
+    build:
+      context: .
+    command: python api/transactions.py
+    container_name: transactions_api
+    ports:
+    - 5100:5100
+    networks:
+    - lab_net
+    environment:
+    - ETH_NODE_URL=http://geth:8545
+    depends_on:
+      geth:
+        condition: service_healthy
+    volumes:
+    - ./blockchain:/app/blockchain
+networks:
+  lab_net:
+    driver: bridge
